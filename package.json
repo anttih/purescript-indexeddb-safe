@@ -1,0 +1,19 @@
+{
+  "name": "purescript-indexeddb-safe",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bundle.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "mocha": "^3.4.2"
+  },
+  "scripts": {
+    "build": "pulp browserify -I test --main Test.Main > bundle.js",
+    "test": "mocha bundle.js"
+  },
+  "author": "",
+  "license": "MIT"
+}

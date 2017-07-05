@@ -1,0 +1,19 @@
+{
+  "name": "purescript-indexeddb-safe",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^3.1.0",
+    "purescript-free": "^4.1.0",
+    "purescript-codec-argonaut": "^2.1.0",
+    "purescript-symbols": "^3.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^3.0.0",
+    "purescript-spec": "^1.0.0"
+  }
+}
