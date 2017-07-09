@@ -35,7 +35,8 @@ import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
 import IndexedDb.Store (Store(..))
-import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore, IDBTransaction, KeyPath(..), StoreName(..), TxMode(..), Version, VersionChangeEventInit)
+import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore,
+                       IDBTransaction, KeyPath(..), StoreName(..), TxMode(..), Version)
 
 data Read
 data Write
@@ -95,24 +96,15 @@ open
   → Version
   → NonEmptyList VersionMigration
   → Request (idb ∷ IDB | eff) IDBDatabase
-open db version migrations = open' db version \versionChange _ tx →
-  migrate version version migrations
+open db version migrations = Req.open db version \versionChange idb itx → void do
+  let req = foldFree (evalTx idb itx) (migrate version version migrations)
+  runAff (const $ Req.abort itx) (handle itx) (runExceptT req)
 
   where
+  -- TODO: Actually migrate
   migrate ∷ Version → Version → NonEmptyList VersionMigration → VersionChangeTx Unit
   migrate _ _ migrations' = migration $ head migrations'
 
-open'
-  ∷ ∀ eff
-  . Database
-  → Version
-  → (VersionChangeEventInit → IDBDatabase → IDBTransaction → VersionChangeTx Unit)
-  → Request (idb ∷ IDB | eff) IDBDatabase
-open' db version f = Req.open db version \versionChange idb tx → void do
-  let req = foldFree (evalTx idb tx) (f versionChange idb tx)
-  runAff (const $ Req.abort tx) (handle tx) (runExceptT req)
-
-  where
   handle ∷ ∀ a. IDBTransaction → Either DOMException a → Eff (idb ∷ IDB | eff) Unit
   handle tx' = case _ of
     -- abort the transaction, this will call the error handler on the IndexedDB open request
