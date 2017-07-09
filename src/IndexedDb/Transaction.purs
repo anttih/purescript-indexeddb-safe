@@ -38,8 +38,13 @@ import IndexedDb.Store (Store(..))
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore,
                        IDBTransaction, KeyPath(..), StoreName(..), TxMode(..), Version)
 
+-- | IDBTransactionMode value "read"
 data Read
+
+-- | Transaction mode corresponding to "readwrite" IDBTransactionMode.
 data Write
+
+-- | IDBTransactionMode value "versionchange"
 data VersionChange
 
 data TransactionF (r ∷ # Type) a
@@ -59,13 +64,14 @@ runTx
   → Transaction r a
   → Request (idb :: IDB | eff) a
 runTx mode idb stores tx = do
-  tx' ← Req.transaction idb (storeName <$> stores) mode
-  foldFree (evalTx idb tx') tx
+  itx ← Req.transaction idb (storeName <$> stores) mode
+  foldFree (evalTx idb itx) tx
 
   where
   storeName ∷ Store k b → StoreName
   storeName (Store { name }) = (StoreName name)
 
+-- | Run a transaction in `read` mode
 runReadTx
   ∷ forall eff k a b
   . IDBDatabase
@@ -74,6 +80,7 @@ runReadTx
   → Request (idb :: IDB | eff) a
 runReadTx = runTx (TxMode "read")
 
+-- | Run a transaction in `readwrite` mode
 runReadWriteTx
   ∷ forall eff k a b
   . IDBDatabase
@@ -90,6 +97,7 @@ data VersionMigration = VersionMigration Version (VersionChangeTx Unit)
 migration ∷ VersionMigration → VersionChangeTx Unit
 migration (VersionMigration _ tx) = tx
 
+-- | Opens the given database and migrates to the given version
 open
   ∷ ∀ eff
   . Database
@@ -112,13 +120,16 @@ open db version migrations = Req.open db version \versionChange idb itx → void
     -- All ok, do nothing. The open request onsuccess callback will be called.
     Right _ → pure unit
 
+-- | Adds a record to a store.
 add ∷ ∀ e k a. Store k a → a → Transaction (write ∷ Write | e) Unit
 add (Store { name, codec }) item = liftF $ Add (StoreName name) (JA.encode codec item) unit
 
+-- | Updates an existing record or adds a new record with a given key.
 put ∷ ∀ e k a. Store k a → a → Transaction (write ∷ Write | e) Unit
 put (Store { name, codec }) item = liftF
   $ Put (StoreName name) (JA.encode codec item) unit
 
+-- | Gets a record by the primary key.
 get ∷ ∀ e k a. IsKey k ⇒ Store k a → k → Transaction (read ∷ Read | e) (Maybe a)
 get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
   where
@@ -127,9 +138,11 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
           Nothing → pure Nothing
           Just json → pure <$> JA.decode codec json
 
+-- | Deletes a record by the primary key.
 delete ∷ ∀ e k a. IsKey k ⇒ Store k a → k → Transaction (write ∷ Write | e) Unit
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
 
+-- | Create an object store.
 createObjectStore
   ∷ ∀ e k a
   . Store k a
