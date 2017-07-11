@@ -6,9 +6,6 @@ module IndexedDb.Transaction
   , Read
   , Write
   , VersionChange
-  , class LabelsToList
-  , RLProxy
-  , labelsToList
   , add
   , createObjectStore
   , delete
@@ -35,7 +32,7 @@ import Data.Either (Either(Right, Left))
 import Data.List as List
 import Data.List.NonEmpty (NonEmptyList, head)
 import Data.Maybe (Maybe(..))
-import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Record (class LabelsToList, RLProxy(..), labelsToList)
 import Data.Traversable (traverse)
 import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
@@ -147,22 +144,6 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
 -- | Deletes a record by the primary key.
 delete ∷ ∀ e k ir a. IsKey k ⇒ Store k ir a → k → Transaction (write ∷ Write | e) Unit
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
-
-data RLProxy (rl ∷ R.RowList) = RLProxy
-
-class LabelsToList (rl ∷ R.RowList) where
-  labelsToList ∷ RLProxy rl → List.List String
-
-instance labelsToListNil ∷ LabelsToList R.Nil where
-  labelsToList _ = List.Nil
-
-instance labelsToListCons ∷
-  ( IsSymbol sym
-  , LabelsToList rest)
-  ⇒ LabelsToList (R.Cons sym t rest) where
-  labelsToList _ = List.Cons
-                     (reflectSymbol (SProxy ∷ SProxy sym))
-                     (labelsToList (RLProxy ∷ RLProxy rest))
 
 -- | Create an object store.
 createObjectStore
