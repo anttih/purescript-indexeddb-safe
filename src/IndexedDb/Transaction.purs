@@ -57,10 +57,10 @@ data TransactionF (r ∷ # Type) a
 type Transaction r a = Free (TransactionF r) a
 
 runTx
-  :: forall eff r k a b
+  :: forall eff r k ir a b
   . TxMode
   → IDBDatabase
-  → Array (Store k b)
+  → Array (Store k ir b)
   → Transaction r a
   → Request (idb :: IDB | eff) a
 runTx mode idb stores tx = do
@@ -68,23 +68,23 @@ runTx mode idb stores tx = do
   foldFree (evalTx idb itx) tx
 
   where
-  storeName ∷ Store k b → StoreName
+  storeName ∷ Store k ir b → StoreName
   storeName (Store { name }) = (StoreName name)
 
 -- | Run a transaction in `read` mode
 runReadTx
-  ∷ forall eff k a b
+  ∷ forall eff k ir a b
   . IDBDatabase
-  → Array (Store k b)
+  → Array (Store k ir b)
   → Transaction (read ∷ Read) a
   → Request (idb :: IDB | eff) a
 runReadTx = runTx (TxMode "read")
 
 -- | Run a transaction in `readwrite` mode
 runReadWriteTx
-  ∷ forall eff k a b
+  ∷ forall eff k ir a b
   . IDBDatabase
-  → Array (Store k b)
+  → Array (Store k ir b)
   → Transaction (read ∷ Read, write ∷ Write) a
   → Request (idb :: IDB | eff) a
 runReadWriteTx = runTx (TxMode "readwrite")
@@ -121,16 +121,16 @@ open db version migrations = Req.open db version \versionChange idb itx → void
     Right _ → pure unit
 
 -- | Adds a record to a store.
-add ∷ ∀ e k a. Store k a → a → Transaction (write ∷ Write | e) Unit
+add ∷ ∀ e k ir a. Store k ir a → a → Transaction (write ∷ Write | e) Unit
 add (Store { name, codec }) item = liftF $ Add (StoreName name) (JA.encode codec item) unit
 
 -- | Updates an existing record or adds a new record with a given key.
-put ∷ ∀ e k a. Store k a → a → Transaction (write ∷ Write | e) Unit
+put ∷ ∀ e k ir a. Store k ir a → a → Transaction (write ∷ Write | e) Unit
 put (Store { name, codec }) item = liftF
   $ Put (StoreName name) (JA.encode codec item) unit
 
 -- | Gets a record by the primary key.
-get ∷ ∀ e k a. IsKey k ⇒ Store k a → k → Transaction (read ∷ Read | e) (Maybe a)
+get ∷ ∀ e k ir a. IsKey k ⇒ Store k ir a → k → Transaction (read ∷ Read | e) (Maybe a)
 get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
   where
   dec ∷ Maybe Json → Either JsonDecodeError (Maybe a)
@@ -139,13 +139,13 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
           Just json → pure <$> JA.decode codec json
 
 -- | Deletes a record by the primary key.
-delete ∷ ∀ e k a. IsKey k ⇒ Store k a → k → Transaction (write ∷ Write | e) Unit
+delete ∷ ∀ e k ir a. IsKey k ⇒ Store k ir a → k → Transaction (write ∷ Write | e) Unit
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
 
 -- | Create an object store.
 createObjectStore
-  ∷ ∀ e k a
-  . Store k a
+  ∷ ∀ e k ir a
+  . Store k ir a
   → Transaction (versionchange ∷ VersionChange | e) IDBObjectStore
 createObjectStore (Store { name, keyPath }) = liftF (CreateObjectStore name (KeyPath keyPath) id)
 

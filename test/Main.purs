@@ -16,22 +16,19 @@ import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
 import IndexedDb (Database(Database), IDB, Request, Store, Transaction, Version(Version), VersionMigration(VersionMigration))
 import IndexedDb as I
+import IndexedDb.Store (Unique)
 import IndexedDb.Transaction (Read, Write, VersionChangeTx)
 import Test.Spec (SpecEffects, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Mocha (MOCHA, runMocha)
-import Type.Proxy (Proxy(..))
 
 codec ∷ JsonCodec { id ∷ Int, value ∷ String }
 codec = JA.object "Test record" $ JA.record
   # JA.recordProp (SProxy ∷ SProxy "id") JA.int
   # JA.recordProp (SProxy ∷ SProxy "value") JA.string
 
-testStore ∷ Store Int { id ∷ Int, value ∷ String }
-testStore = I.mkStore "test_store"
-                    (SProxy ∷ SProxy "id")
-                    (Proxy ∷ Proxy { value ∷ String })
-                    codec
+testStore ∷ Store Int { value ∷ Unique } { id ∷ Int, value ∷ String }
+testStore = I.mkStore "test_store" (SProxy ∷ SProxy "id") codec
 
 runTx ∷ ∀ eff a. Transaction (read ∷ Read, write ∷ Write) a → Request (idb ∷ IDB | eff) a
 runTx tx = do
@@ -76,3 +73,5 @@ main = runMocha do
         I.put testStore {id: 2, value: "Changed!"}
         I.get testStore 2
       (_.value <$> res) `shouldEqual` (Just "Changed!")
+
+      --index testStore (SProxy ∷ SProxy "value")
