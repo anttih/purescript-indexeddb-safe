@@ -7,6 +7,7 @@ foreign import data IDB ∷ Effect
 foreign import data IDBDatabase ∷ Type
 foreign import data IDBObjectStore ∷ Type
 foreign import data IDBTransaction ∷ Type
+foreign import data IDBIndex ∷ Type
 
 newtype Database = Database String
 newtype Version = Version Int

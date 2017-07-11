@@ -206,6 +206,31 @@ exports.createObjectStoreImpl = function (left) {
   };
 };
 
+exports.createIndexImpl = function (left) {
+  return function (right) {
+    return function (db) {
+      return function (indexName) {
+        return function (keyPath) {
+          return function (unique) {
+            return function () {
+              try {
+                var index = db.createIndex(indexName, keyPath, { unique: unique });
+                return right(index);
+              } catch (e) {
+                if (e instanceof DOMException) {
+                  return left(e)();
+                } else {
+                  throw e;
+                }
+              }
+            };
+          }
+        };
+      };
+    };
+  };
+};
+
 exports.deleteImpl = function (store) {
   return function (key) {
     return function (error) {

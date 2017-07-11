@@ -6,6 +6,9 @@ module IndexedDb.Transaction
   , Read
   , Write
   , VersionChange
+  , class LabelsToList
+  , RLProxy
+  , labelsToList
   , add
   , createObjectStore
   , delete
@@ -29,14 +32,17 @@ import Data.Argonaut.Core (Json)
 import Data.Codec.Argonaut (JsonDecodeError, printJsonDecodeError)
 import Data.Codec.Argonaut as JA
 import Data.Either (Either(Right, Left))
+import Data.List as List
 import Data.List.NonEmpty (NonEmptyList, head)
 import Data.Maybe (Maybe(..))
+import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Traversable (traverse)
 import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
 import IndexedDb.Store (Store(..))
-import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore,
-                       IDBTransaction, KeyPath(..), StoreName(..), TxMode(..), Version)
+import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore, IDBTransaction, KeyPath(KeyPath), StoreName(StoreName), TxMode(TxMode), Version)
+import Type.Row as R
 
 -- | IDBTransactionMode value "read"
 data Read
@@ -52,7 +58,7 @@ data TransactionF (r ∷ # Type) a
   | Get StoreName Key (Maybe Json → Either JsonDecodeError a)
   | Delete StoreName Key a
   | Put StoreName Json a
-  | CreateObjectStore String KeyPath (IDBObjectStore → a)
+  | CreateObjectStore String KeyPath (List.List String) (IDBObjectStore → a)
 
 type Transaction r a = Free (TransactionF r) a
 
@@ -142,12 +148,31 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
 delete ∷ ∀ e k ir a. IsKey k ⇒ Store k ir a → k → Transaction (write ∷ Write | e) Unit
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
 
+data RLProxy (rl ∷ R.RowList) = RLProxy
+
+class LabelsToList (rl ∷ R.RowList) where
+  labelsToList ∷ RLProxy rl → List.List String
+
+instance labelsToListNil ∷ LabelsToList R.Nil where
+  labelsToList _ = List.Nil
+
+instance labelsToListCons ∷
+  ( IsSymbol sym
+  , LabelsToList rest)
+  ⇒ LabelsToList (R.Cons sym t rest) where
+  labelsToList _ = List.Cons
+                     (reflectSymbol (SProxy ∷ SProxy sym))
+                     (labelsToList (RLProxy ∷ RLProxy rest))
+
 -- | Create an object store.
 createObjectStore
-  ∷ ∀ e k ir a
-  . Store k ir a
+  ∷ ∀ e k ir rl a
+  . R.RowToList ir rl
+  ⇒ LabelsToList rl
+  ⇒ Store k (Record ir) a
   → Transaction (versionchange ∷ VersionChange | e) IDBObjectStore
-createObjectStore (Store { name, keyPath }) = liftF (CreateObjectStore name (KeyPath keyPath) id)
+createObjectStore (Store { name, keyPath }) = liftF
+  $ CreateObjectStore name (KeyPath keyPath) (labelsToList (RLProxy ∷ RLProxy rl)) id
 
 -- The implementation here ensures that all requests are run within
 -- the same transaction.
@@ -167,8 +192,9 @@ evalTx idb tx = case _ of
     store ← Req.objectStore storeName tx
     Req.put store d
     pure next
-  CreateObjectStore storeName keyPath f → do
+  CreateObjectStore storeName keyPath indices f → do
     store ← Req.createObjectStore idb storeName keyPath
+    _ ← traverse (\n → Req.createIndex store n (KeyPath n) true) indices
     pure (f store)
   Delete storeName key next → do
     store ← Req.objectStore storeName tx

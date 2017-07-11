@@ -4,6 +4,7 @@ module IndexedDb.Request
   , add
   , close
   , createObjectStore
+  , createIndex
   , deleteDatabase
   , delete
   , get
@@ -22,7 +23,7 @@ import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import IndexedDb.Key (Key)
-import IndexedDb.Types (Database, TxMode, IDB, IDBDatabase, IDBObjectStore, IDBTransaction, KeyPath, StoreName, Version, VersionChangeEventInit)
+import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
 import Prelude hiding (add)
 
 type Request eff a = ExceptT DOMException (Aff eff) a
@@ -80,6 +81,17 @@ createObjectStore
 createObjectStore idb store key = ExceptT
   $ liftEff
   $ createObjectStoreImpl Left Right idb store key
+
+createIndex
+  ∷ ∀ eff
+  . IDBObjectStore
+  → String
+  → KeyPath
+  → Boolean
+  → Request (idb ∷ IDB | eff) IDBIndex
+createIndex store indexName path unique = ExceptT
+  $ liftEff
+  $ createIndexImpl Left Right store indexName path unique
 
 delete ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) Unit
 delete store key = makeRequest (deleteImpl store key)
@@ -151,6 +163,16 @@ foreign import createObjectStoreImpl
   → String
   → KeyPath
   → Eff (idb ∷ IDB | eff) (Either DOMException IDBObjectStore)
+
+foreign import createIndexImpl
+  ∷ forall eff
+  . (DOMException → Either DOMException IDBObjectStore)
+  → (IDBObjectStore → Either DOMException IDBObjectStore)
+  → IDBObjectStore
+  → String
+  → KeyPath
+  → Boolean
+  → Eff (idb ∷ IDB | eff) (Either DOMException IDBIndex)
 
 foreign import deleteImpl
   ∷ forall eff
