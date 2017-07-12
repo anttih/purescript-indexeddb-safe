@@ -154,7 +154,10 @@ index
   ⇒ IsSymbol l
   ⇒ RowCons l t r a -- get the type of t
   ⇒ RowCons l it r2 ir -- check that l is a label in ir
-  ⇒ Store k (Record ir) (Record a) → SProxy l → t → Transaction (read ∷ Read | e) (Maybe (Record a))
+  ⇒ Store k (Record ir) (Record a)
+  → SProxy l
+  → t
+  → Transaction (read ∷ Read | e) (Maybe (Record a))
 index (Store { name, codec }) key v = liftF
   $ Index (StoreName name) (reflectSymbol key) (toKey v) dec
 
