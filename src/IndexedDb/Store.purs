@@ -5,9 +5,9 @@ module IndexedDb.Store
   ) where
 
 import Data.Codec.Argonaut as JA
-import Data.Record (class HasLabels, class RowType)
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import IndexedDb.Key (class IsKey)
+import IndexedDb.Type.Row (class HasLabels, class RowType)
 import Type.Row (class RowToList)
 
 data Unique = Unique

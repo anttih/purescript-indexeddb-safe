@@ -33,7 +33,6 @@ import Data.Either (Either(Right, Left))
 import Data.List as List
 import Data.List.NonEmpty (NonEmptyList, head)
 import Data.Maybe (Maybe(..))
-import Data.Record (class LabelsToList, RLProxy(..), labelsToList)
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import Data.Traversable (traverse)
 import IndexedDb.Key (class IsKey, Key, toKey)
@@ -41,6 +40,7 @@ import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
 import IndexedDb.Store (Store(..))
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore, IDBTransaction, KeyPath(KeyPath), StoreName(StoreName), TxMode(TxMode), Version)
+import IndexedDb.Type.Row (class LabelsToList, RLProxy(..), labelsToList)
 import Type.Row as R
 
 -- | IDBTransactionMode value "read"

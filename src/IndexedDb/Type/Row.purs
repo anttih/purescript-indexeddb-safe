@@ -1,4 +1,4 @@
-module Data.Record
+module IndexedDb.Type.Row
   ( class HasLabels
   , class RowType
   , class LabelsToList
