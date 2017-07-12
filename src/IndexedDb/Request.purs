@@ -8,6 +8,7 @@ module IndexedDb.Request
   , deleteDatabase
   , delete
   , get
+  , index
   , put
   , objectStore
   , open
@@ -68,6 +69,9 @@ add store item = makeRequest (addImpl store item)
 
 get ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) (Maybe Json)
 get store key = makeRequest (getImpl Nothing Just store key)
+
+index ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Maybe Json)
+index store indexName v = makeRequest (indexImpl Nothing Just store indexName v)
 
 put ∷ ∀ eff. IDBObjectStore → Json → Request (idb ∷ IDB | eff) Unit
 put store item = makeRequest (putImpl store item)
@@ -143,6 +147,17 @@ foreign import getImpl
   → (a → Maybe a) -- Just
   → IDBObjectStore
   → Key
+  → (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  → (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
+  → Eff (idb ∷ IDB | eff) Unit
+
+foreign import indexImpl
+  ∷ forall eff a
+  . Maybe a -- The value Nothing
+  → (a → Maybe a) -- Just
+  → IDBObjectStore
+  → String -- the index name
+  → Key -- the value, really should be Foreign
   → (DOMException → Eff (idb ∷ IDB | eff) Unit)
   → (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
   → Eff (idb ∷ IDB | eff) Unit

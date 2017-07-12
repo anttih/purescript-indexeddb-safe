@@ -74,4 +74,15 @@ main = runMocha do
         I.get testStore 2
       (_.value <$> res) `shouldEqual` (Just "Changed!")
 
-      --index testStore (SProxy ∷ SProxy "value")
+    describe "Indices" do
+      it "can fetch a record using an index" do
+        res ← liftReq $ runTx do
+          I.add testStore {id: 2, value: "Boom"}
+          I.index testStore (SProxy ∷ SProxy "value") "Boom"
+        (_.value <$> res) `shouldEqual` (Just "Boom")
+
+      it "returns Nothing when a record is not found using a unique index" do
+        res ← liftReq $ runTx do
+          I.add testStore {id: 1, value: "Value"}
+          I.index testStore (SProxy ∷ SProxy "value") "Not found"
+        (_.value <$> res) `shouldEqual` Nothing

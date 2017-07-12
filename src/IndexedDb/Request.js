@@ -156,6 +156,31 @@ exports.getImpl = function (nothing) {
   };
 };
 
+exports.indexImpl = function (nothing) {
+  return function (just) {
+    return function (store) {
+      return function (indexName) {
+        return function (key) {
+          return function (error) {
+            return function (success) {
+              return function () {
+                var index = store.index(indexName)
+                var req = index.openCursor(key)
+                req.onsuccess = function () {
+                  success(req.result == undefined ? nothing : just(req.result.value))();
+                };
+                req.onerror = function () {
+                  error(req.error)();
+                };
+              };
+           };
+          };
+        };
+      };
+    };
+  };
+};
+
 exports.putImpl = function (store) {
   return function (item) {
     return function (error) {

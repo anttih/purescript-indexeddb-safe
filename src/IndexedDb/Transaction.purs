@@ -10,6 +10,7 @@ module IndexedDb.Transaction
   , createObjectStore
   , delete
   , get
+  , index
   , open
   , put
   , runReadTx
@@ -33,6 +34,7 @@ import Data.List as List
 import Data.List.NonEmpty (NonEmptyList, head)
 import Data.Maybe (Maybe(..))
 import Data.Record (class LabelsToList, RLProxy(..), labelsToList)
+import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import Data.Traversable (traverse)
 import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
@@ -56,6 +58,7 @@ data TransactionF (r ∷ # Type) a
   | Delete StoreName Key a
   | Put StoreName Json a
   | CreateObjectStore String KeyPath (List.List String) (IDBObjectStore → a)
+  | Index StoreName String Key (Maybe Json → Either JsonDecodeError a)
 
 type Transaction r a = Free (TransactionF r) a
 
@@ -145,6 +148,22 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
 delete ∷ ∀ e k ir a. IsKey k ⇒ Store k ir a → k → Transaction (write ∷ Write | e) Unit
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
 
+index
+  ∷ ∀ e k l t r r2 a it ir
+  . IsKey t
+  ⇒ IsSymbol l
+  ⇒ RowCons l t r a -- get the type of t
+  ⇒ RowCons l it r2 ir -- check that l is a label in ir
+  ⇒ Store k (Record ir) (Record a) → SProxy l → t → Transaction (read ∷ Read | e) (Maybe (Record a))
+index (Store { name, codec }) key v = liftF
+  $ Index (StoreName name) (reflectSymbol key) (toKey v) dec
+
+  where
+  dec ∷ Maybe Json → Either JsonDecodeError (Maybe (Record a))
+  dec = case _ of
+          Nothing → pure Nothing
+          Just json → pure <$> JA.decode codec json
+
 -- | Create an object store.
 createObjectStore
   ∷ ∀ e k ir rl a
@@ -181,4 +200,10 @@ evalTx idb tx = case _ of
     store ← Req.objectStore storeName tx
     Req.delete store key
     pure next
+  Index storeName key v f → do
+    store ← Req.objectStore storeName tx
+    res ← Req.index store key v
+    case f res of
+      Left e → liftAff $ throwError (error (printJsonDecodeError e))
+      Right a → pure a
 
