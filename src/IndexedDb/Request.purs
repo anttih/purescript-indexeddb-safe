@@ -22,6 +22,7 @@ import Control.Monad.Except (ExceptT(..))
 import DOM.Exception (DOMException)
 import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
+import Data.Function.Uncurried (Fn5, Fn6, Fn7, runFn5, runFn6, runFn7)
 import Data.Maybe (Maybe(..))
 import IndexedDb.Key (Key)
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
@@ -45,7 +46,7 @@ open
   → Version
   → (VersionChangeEventInit → IDBDatabase → IDBTransaction → Eff (idb ∷ IDB | eff) Unit)
   → Request (idb ∷ IDB | eff) IDBDatabase
-open db v f = makeRequest (openImpl db v f)
+open db v f = makeRequest (\e s → runFn5 openImpl db v f e s)
 
 close ∷ ∀ eff. IDBDatabase → Request (idb ∷ IDB | eff) Unit
 close = liftEff <<< closeImpl
@@ -59,7 +60,8 @@ transaction
   → Array StoreName
   → TxMode
   → Request (idb ∷ IDB | eff) IDBTransaction
-transaction db stores flag = makeRequest (transactionImpl db stores flag)
+transaction db stores flag = makeRequest
+  (\e s → runFn5 transactionImpl db stores flag e s)
 
 objectStore ∷ ∀ eff. StoreName → IDBTransaction → Request (idb :: IDB | eff) IDBObjectStore
 objectStore store tsx = liftEff (objectStoreImpl store tsx)
@@ -68,10 +70,11 @@ add ∷ ∀ eff. IDBObjectStore → Json → Request (idb ∷ IDB | eff) Unit
 add store item = makeRequest (addImpl store item)
 
 get ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) (Maybe Json)
-get store key = makeRequest (getImpl Nothing Just store key)
+get store key = makeRequest (\e s → runFn6 getImpl Nothing Just store key e s)
 
 index ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Maybe Json)
-index store indexName v = makeRequest (indexImpl Nothing Just store indexName v)
+index store indexName v = makeRequest
+  (\e s → runFn7 indexImpl Nothing Just store indexName v e s)
 
 put ∷ ∀ eff. IDBObjectStore → Json → Request (idb ∷ IDB | eff) Unit
 put store item = makeRequest (putImpl store item)
@@ -84,7 +87,7 @@ createObjectStore
   → Request (idb ∷ IDB | eff) IDBObjectStore
 createObjectStore idb store key = ExceptT
   $ liftEff
-  $ createObjectStoreImpl Left Right idb store key
+  $ runFn5 createObjectStoreImpl Left Right idb store key
 
 createIndex
   ∷ ∀ eff
@@ -95,19 +98,20 @@ createIndex
   → Request (idb ∷ IDB | eff) IDBIndex
 createIndex store indexName path unique = ExceptT
   $ liftEff
-  $ createIndexImpl Left Right store indexName path unique
+  $ runFn6 createIndexImpl Left Right store indexName path unique
 
 delete ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) Unit
 delete store key = makeRequest (deleteImpl store key)
 
 foreign import openImpl
-  ∷ forall eff
-  . Database
-  → Version
-  → (VersionChangeEventInit → IDBDatabase → IDBTransaction → Eff (idb ∷ IDB | eff) Unit)
-  → (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  → (IDBDatabase → Eff (idb ∷ IDB | eff) Unit)
-  → Eff (idb ∷ IDB | eff) Unit
+  ∷ forall eff.
+  Fn5
+  Database
+  Version
+  (VersionChangeEventInit → IDBDatabase → IDBTransaction → Eff (idb ∷ IDB | eff) Unit)
+  (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  (IDBDatabase → Eff (idb ∷ IDB | eff) Unit)
+  (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import closeImpl ∷ ∀ eff. IDBDatabase → Eff (idb ∷ IDB | eff) Unit
 
@@ -119,13 +123,14 @@ foreign import deleteDatabaseImpl
   → Eff (idb ∷ IDB | eff) Unit
 
 foreign import transactionImpl
-  ∷ forall eff
-  . IDBDatabase
-  → Array StoreName
-  → TxMode
-  → (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  → (IDBTransaction → Eff (idb ∷ IDB | eff) Unit)
-  → Eff (idb ∷ IDB | eff) Unit
+  ∷ forall eff.
+  Fn5
+  IDBDatabase
+  (Array StoreName)
+  TxMode
+  (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  (IDBTransaction → Eff (idb ∷ IDB | eff) Unit)
+  (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import objectStoreImpl
   ∷ forall eff
@@ -142,25 +147,27 @@ foreign import addImpl
   → Eff (idb ∷ IDB | eff) Unit
 
 foreign import getImpl
-  ∷ forall eff a
-  . Maybe a -- The value Nothing
-  → (a → Maybe a) -- Just
-  → IDBObjectStore
-  → Key
-  → (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  → (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
-  → Eff (idb ∷ IDB | eff) Unit
+  ∷ forall eff a.
+  Fn6
+  (Maybe a) -- The value Nothing
+  (a → Maybe a) -- Just
+  IDBObjectStore
+  Key
+  (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
+  (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import indexImpl
-  ∷ forall eff a
-  . Maybe a -- The value Nothing
-  → (a → Maybe a) -- Just
-  → IDBObjectStore
-  → String -- the index name
-  → Key -- the value, really should be Foreign
-  → (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  → (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
-  → Eff (idb ∷ IDB | eff) Unit
+  ∷ forall eff a.
+  Fn7
+  (Maybe a) -- The value Nothing
+  (a → Maybe a) -- Just
+  IDBObjectStore
+  String -- the index name
+  Key -- the value, really should be Foreign
+  (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
+  (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import putImpl
   ∷ forall eff
@@ -171,23 +178,25 @@ foreign import putImpl
   → Eff (idb ∷ IDB | eff) Unit
 
 foreign import createObjectStoreImpl
-  ∷ forall eff
-  . (DOMException → Either DOMException IDBObjectStore)
-  → (IDBObjectStore → Either DOMException IDBObjectStore)
-  → IDBDatabase
-  → String
-  → KeyPath
-  → Eff (idb ∷ IDB | eff) (Either DOMException IDBObjectStore)
+  ∷ forall eff.
+  Fn5
+  (DOMException → Either DOMException IDBObjectStore)
+  (IDBObjectStore → Either DOMException IDBObjectStore)
+  IDBDatabase
+  String
+  KeyPath
+  (Eff (idb ∷ IDB | eff) (Either DOMException IDBObjectStore))
 
 foreign import createIndexImpl
-  ∷ forall eff
-  . (DOMException → Either DOMException IDBObjectStore)
-  → (IDBObjectStore → Either DOMException IDBObjectStore)
-  → IDBObjectStore
-  → String
-  → KeyPath
-  → Boolean
-  → Eff (idb ∷ IDB | eff) (Either DOMException IDBIndex)
+  ∷ forall eff.
+  Fn6
+  (DOMException → Either DOMException IDBObjectStore)
+  (IDBObjectStore → Either DOMException IDBObjectStore)
+  IDBObjectStore
+  String
+  KeyPath
+  Boolean
+  (Eff (idb ∷ IDB | eff) (Either DOMException IDBIndex))
 
 foreign import deleteImpl
   ∷ forall eff
