@@ -25,20 +25,18 @@ import Control.Monad.Aff (runAff)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (error)
-import Control.Monad.Except (runExceptT, throwError)
+import Control.Monad.Except (runExcept, runExceptT, throwError)
 import Control.Monad.Free (Free, foldFree, liftF)
 import DOM.Exception (DOMException)
-import Data.Argonaut.Core (Json)
-import Data.Codec.Argonaut (JsonDecodeError, printJsonDecodeError)
-import Data.Codec.Argonaut as JA
+import Data.Codec as Codec
 import Data.Either (Either(Right, Left))
+import Data.Foreign (F, Foreign)
 import Data.List as List
 import Data.List.NonEmpty (NonEmptyList, head)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import Data.Traversable (traverse)
-import IndexedDb.Index (class RowListToIndices, NonUnique, Unique,
-                       rowListToIndices)
+import IndexedDb.Index (class RowListToIndices, NonUnique, Unique, rowListToIndices)
 import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
@@ -57,13 +55,13 @@ data Write
 data VersionChange
 
 data TransactionF (r ∷ # Type) a
-  = Add StoreName Json a
-  | Get StoreName Key (Maybe Json → Either JsonDecodeError a)
+  = Add StoreName Foreign a
+  | Get StoreName Key (Maybe Foreign → F a)
   | Delete StoreName Key a
-  | Put StoreName Json a
+  | Put StoreName Foreign a
   | CreateObjectStore String KeyPath (List.List { name ∷ String, unique ∷ Boolean}) (IDBObjectStore → a)
-  | IndexUnique StoreName String Key (Maybe Json → Either JsonDecodeError a)
-  | IndexNonUnique StoreName String Key (Array Json → Either JsonDecodeError a)
+  | IndexUnique StoreName String Key (Maybe Foreign → F a)
+  | IndexNonUnique StoreName String Key (Array Foreign → F a)
 
 type Transaction r a = Free (TransactionF r) a
 
@@ -132,22 +130,22 @@ open db version migrations = Req.open db version \versionChange idb itx → void
     Right _ → pure unit
 
 -- | Adds a record to a store.
-add ∷ ∀ mode it ir a. Store it ir a → (Record a) → Transaction (write ∷ Write | mode) Unit
-add (Store { name, codec }) item = liftF $ Add (StoreName name) (JA.encode codec item) unit
+add ∷ ∀ mode it ir a. Store it ir a → Record a → Transaction (write ∷ Write | mode) Unit
+add (Store { name, codec }) item = liftF $ Add (StoreName name) (Codec.encode codec item) unit
 
 -- | Updates an existing record or adds a new record with a given key.
-put ∷ ∀ mode it ir a. Store it ir a → (Record a) → Transaction (write ∷ Write | mode) Unit
+put ∷ ∀ mode it ir a. Store it ir a → Record a → Transaction (write ∷ Write | mode) Unit
 put (Store { name, codec }) item = liftF
-  $ Put (StoreName name) (JA.encode codec item) unit
+  $ Put (StoreName name) (Codec.encode codec item) unit
 
 -- | Gets a record by the primary key.
 get ∷ ∀ mode it ir a. IsKey it ⇒ Store it ir a → it → Transaction (read ∷ Read | mode) (Maybe (Record a))
 get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
   where
-  dec ∷ Maybe Json → Either JsonDecodeError (Maybe (Record a))
+  dec ∷ Maybe Foreign → F (Maybe (Record a))
   dec = case _ of
           Nothing → pure Nothing
-          Just json → pure <$> JA.decode codec json
+          Just item → pure <$> Codec.decode codec item
 
 -- | Deletes a record by the primary key.
 delete ∷ ∀ mode it ir a. IsKey it ⇒ Store it ir a → it → Transaction (write ∷ Write | mode) Unit
@@ -170,10 +168,10 @@ instance indexQueryUnique
     $ IndexUnique (StoreName name) (reflectSymbol key) v dec
 
     where
-    dec ∷ Maybe Json → Either JsonDecodeError (Maybe (Record r))
+    dec ∷ Maybe Foreign → F (Maybe (Record r))
     dec = case _ of
             Nothing → pure Nothing
-            Just json → pure <$> JA.decode codec json
+            Just item → pure <$> Codec.decode codec item
 
 instance indexQueryNonUnique
   ∷ ( IsSymbol label
@@ -181,7 +179,7 @@ instance indexQueryNonUnique
     )
   => IndexQuery ir2 r label Array where
   indexQ (Store { name, codec }) key v = liftF
-    $ IndexNonUnique (StoreName name) (reflectSymbol key) v (traverse (JA.decode codec))
+    $ IndexNonUnique (StoreName name) (reflectSymbol key) v (traverse (Codec.decode codec))
 
 index
   ∷ ∀ mode it label value r r2 a t ir o
@@ -217,8 +215,8 @@ evalTx idb tx = case _ of
   Get storeName key f → do
     store ← Req.objectStore storeName tx
     res ← Req.get store key
-    case f res of
-      Left e → liftAff $ throwError (error (printJsonDecodeError e))
+    case runExcept (f res) of
+      Left e → liftAff $ throwError (error (show e))
       Right a → pure a
   Put storeName d next → do
     store ← Req.objectStore storeName tx
@@ -237,13 +235,13 @@ evalTx idb tx = case _ of
   IndexUnique storeName key v f → do
     store ← Req.objectStore storeName tx
     res ← Req.index store key v
-    case f res of
-      Left e → liftAff $ throwError (error (printJsonDecodeError e))
+    case runExcept (f res) of
+      Left e → liftAff $ throwError (error (show e))
       Right a → pure a
   IndexNonUnique storeName key v f → do
     store ← Req.objectStore storeName tx
     res ← Req.indexNonUnique store key v
-    case f res of
-      Left e → liftAff $ throwError (error (printJsonDecodeError e))
+    case runExcept (f res) of
+      Left e → liftAff $ throwError (error (show e))
       Right a → pure a
 

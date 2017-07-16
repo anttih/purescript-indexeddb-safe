@@ -8,40 +8,44 @@ import Control.Monad.Eff.Exception (error)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Except (runExceptT)
 import DOM.Exception (message)
-import Data.Codec.Argonaut (JsonCodec)
-import Data.Codec.Argonaut as JA
+import Data.Codec as Codec
 import Data.Either (either)
+import Data.Foreign (readInt, readString, toForeign)
+import Data.Foreign.Index ((!))
 import Data.List.NonEmpty (singleton)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
-import IndexedDb (Database(Database), IDB, Request, Store, Transaction, Version(Version), VersionMigration(VersionMigration))
+import IndexedDb (Database(Database), IDB, Request, Store, Transaction, Unique, NonUnique, Read, Write, VersionChangeTx, Version(Version), VersionMigration(VersionMigration))
 import IndexedDb as I
-import IndexedDb.Index (NonUnique, Unique)
-import IndexedDb.Transaction (Read, Write, VersionChangeTx)
+import IndexedDb.Store (ForeignCodec)
 import Test.Spec (SpecEffects, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Mocha (MOCHA, runMocha)
 
-codec ∷ JsonCodec { id ∷ Int
+codec ∷ ForeignCodec { id ∷ Int
+                     , slug ∷ String
+                     , artist ∷ String
+                     , album ∷ String
+                     , year ∷ Int
+                     }
+codec = Codec.basicCodec dec toForeign
+  where
+  dec value = do
+    id ← value ! "id" >>= readInt
+    slug ← value ! "slug" >>= readString
+    artist ← value ! "artist" >>= readString
+    album ← value ! "album" >>= readString
+    year ← value ! "year" >>= readInt
+    pure { id, slug, artist, album, year }
+
+testStore ∷ Store Int -- The type of the primary key
+                  ( slug ∷ Unique, artist ∷ NonUnique ) -- Indices
+                  ( id ∷ Int -- The record type to be stored
                   , slug ∷ String
                   , artist ∷ String
                   , album ∷ String
                   , year ∷ Int
-                  }
-codec = JA.object "Albums" $ JA.record
-  # JA.recordProp (SProxy ∷ SProxy "id") JA.int
-  # JA.recordProp (SProxy ∷ SProxy "slug") JA.string
-  # JA.recordProp (SProxy ∷ SProxy "artist") JA.string
-  # JA.recordProp (SProxy ∷ SProxy "album") JA.string
-  # JA.recordProp (SProxy ∷ SProxy "year") JA.int
-
-testStore ∷ Store Int ( slug ∷ Unique, artist ∷ NonUnique )
-                      ( id ∷ Int
-                      , slug ∷ String
-                      , artist ∷ String
-                      , album ∷ String
-                      , year ∷ Int
-                      )
+                  )
 testStore = I.mkStore "albums" (SProxy ∷ SProxy "id") codec
 
 runTx ∷ ∀ eff a. Transaction (read ∷ Read, write ∷ Write) a → Request (idb ∷ IDB | eff) a

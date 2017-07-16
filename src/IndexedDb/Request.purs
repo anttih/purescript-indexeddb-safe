@@ -21,8 +21,8 @@ import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Except (ExceptT(..))
 import DOM.Exception (DOMException)
-import Data.Argonaut.Core (Json)
 import Data.Either (Either(..))
+import Data.Foreign (Foreign)
 import Data.Function.Uncurried (Fn5, Fn6, Fn7, runFn5, runFn6, runFn7)
 import Data.Maybe (Maybe(..))
 import IndexedDb.Key (Key)
@@ -67,21 +67,21 @@ transaction db stores flag = makeRequest
 objectStore ∷ ∀ eff. StoreName → IDBTransaction → Request (idb :: IDB | eff) IDBObjectStore
 objectStore store tsx = liftEff (objectStoreImpl store tsx)
 
-add ∷ ∀ eff. IDBObjectStore → Json → Request (idb ∷ IDB | eff) Unit
+add ∷ ∀ eff. IDBObjectStore → Foreign → Request (idb ∷ IDB | eff) Unit
 add store item = makeRequest (addImpl store item)
 
-get ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) (Maybe Json)
+get ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) (Maybe Foreign)
 get store key = makeRequest (\e s → runFn6 getImpl Nothing Just store key e s)
 
-index ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Maybe Json)
+index ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Maybe Foreign)
 index store indexName v = makeRequest
   (\e s → runFn7 indexImpl Nothing Just store indexName v e s)
 
-indexNonUnique ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Array Json)
+indexNonUnique ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Array Foreign)
 indexNonUnique store indexName v = makeRequest
   (\e s → runFn5 indexNonUniqueImpl store indexName v e s)
 
-put ∷ ∀ eff. IDBObjectStore → Json → Request (idb ∷ IDB | eff) Unit
+put ∷ ∀ eff. IDBObjectStore → Foreign → Request (idb ∷ IDB | eff) Unit
 put store item = makeRequest (putImpl store item)
 
 createObjectStore
@@ -146,7 +146,7 @@ foreign import objectStoreImpl
 foreign import addImpl
   ∷ forall eff
   . IDBObjectStore
-  → Json
+  → Foreign
   → (DOMException → Eff (idb ∷ IDB | eff) Unit)
   → (Unit → Eff (idb ∷ IDB | eff) Unit)
   → Eff (idb ∷ IDB | eff) Unit
@@ -159,7 +159,7 @@ foreign import getImpl
   IDBObjectStore
   Key
   (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
+  (Maybe Foreign → Eff (idb ∷ IDB | eff) Unit)
   (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import indexImpl
@@ -171,7 +171,7 @@ foreign import indexImpl
   String -- the index name
   Key -- the value, really should be Foreign
   (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
+  (Maybe Foreign → Eff (idb ∷ IDB | eff) Unit)
   (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import indexNonUniqueImpl
@@ -181,13 +181,13 @@ foreign import indexNonUniqueImpl
   String -- the index name
   Key -- the value, really should be Foreign
   (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  (Array Json → Eff (idb ∷ IDB | eff) Unit)
+  (Array Foreign → Eff (idb ∷ IDB | eff) Unit)
   (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import putImpl
   ∷ forall eff
   . IDBObjectStore
-  → Json
+  → Foreign
   → (DOMException → Eff (idb ∷ IDB | eff) Unit)
   → (Unit → Eff (idb ∷ IDB | eff) Unit)
   → Eff (idb ∷ IDB | eff) Unit

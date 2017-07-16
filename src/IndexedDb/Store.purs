@@ -1,9 +1,11 @@
 module IndexedDb.Store
   ( Store(..)
+  , ForeignCodec
   , mkStore
   ) where
 
-import Data.Codec.Argonaut as JA
+import Data.Codec (BasicCodec)
+import Data.Foreign (F, Foreign)
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import IndexedDb.Key (class IsKey)
 import IndexedDb.Type.Row (class HasLabels)
@@ -12,12 +14,14 @@ import Type.Row (class RowToList)
 -- foreign import kind IndexType
 -- foreign import data Unique ∷ IndexType
 
+type ForeignCodec a = BasicCodec F Foreign a
+
 -- newtype Codec a = Codec { encode ∷ a → Foreign
 --                         , decode ∷ Foreign → F a
 --                         }
 
 newtype Store k (ir ∷ # Type) (r ∷ # Type)
-  = Store { name ∷ String, keyPath ∷ String, codec ∷ JA.JsonCodec (Record r) }
+  = Store { name ∷ String, keyPath ∷ String, codec ∷ ForeignCodec (Record r) }
 
 mkStore
   ∷ ∀ k a ir rl r r1
@@ -28,6 +32,6 @@ mkStore
   ⇒ HasLabels rl r
   ⇒ String
   → SProxy k
-  → JA.JsonCodec (Record r)
+  → ForeignCodec (Record r)
   → Store a ir r
 mkStore name k codec = Store { name, keyPath: reflectSymbol k, codec }
