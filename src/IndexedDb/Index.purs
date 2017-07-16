@@ -5,32 +5,37 @@ import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import IndexedDb.Type.Row (RLProxy(..))
 import Type.Row as R
 
+-- | Type for unique indices
 data Unique
+
+-- | Type for non-unique indices
 data NonUnique
 
-class LabelsToList (rl ∷ R.RowList) where
-  labelsToList ∷ RLProxy rl → List.List { name ∷ String, unique ∷ Boolean }
+-- | Transforms a type-level row of index definitions into
+-- | a term-level list of indices.
+class RowListToIndices (rl ∷ R.RowList) where
+  rowListToIndices ∷ RLProxy rl → List.List { name ∷ String, unique ∷ Boolean }
 
-instance labelsToListNil ∷ LabelsToList R.Nil where
-  labelsToList _ = List.Nil
+instance rowListToIndexTypesNil ∷ RowListToIndices R.Nil where
+  rowListToIndices _ = List.Nil
 
-instance labelsToListConsUnique ∷
+instance rowListToIndexTypesConsUnique ∷
   ( IsSymbol sym
-  , LabelsToList rest)
-  ⇒ LabelsToList (R.Cons sym Unique rest) where
-    labelsToList _ = List.Cons { name: (reflectSymbol (SProxy ∷ SProxy sym))
+  , RowListToIndices rest)
+  ⇒ RowListToIndices (R.Cons sym Unique rest) where
+    rowListToIndices _ = List.Cons { name: (reflectSymbol (SProxy ∷ SProxy sym))
                                , unique: true
                                }
-                     (labelsToList (RLProxy ∷ RLProxy rest))
+                     (rowListToIndices (RLProxy ∷ RLProxy rest))
 
 
-instance labelsToListConsNonUnique ∷
+instance rowListToIndexTypesConsNonUnique ∷
   ( IsSymbol sym
-  , LabelsToList rest)
-  ⇒ LabelsToList (R.Cons sym NonUnique rest) where
-    labelsToList _ = List.Cons { name: (reflectSymbol (SProxy ∷ SProxy sym))
+  , RowListToIndices rest)
+  ⇒ RowListToIndices (R.Cons sym NonUnique rest) where
+    rowListToIndices _ = List.Cons { name: (reflectSymbol (SProxy ∷ SProxy sym))
                                , unique: false
                                }
-                     (labelsToList (RLProxy ∷ RLProxy rest))
+                     (rowListToIndices (RLProxy ∷ RLProxy rest))
 
 

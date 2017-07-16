@@ -37,7 +37,8 @@ import Data.List.NonEmpty (NonEmptyList, head)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import Data.Traversable (traverse)
-import IndexedDb.Index (class LabelsToList, NonUnique, Unique, labelsToList)
+import IndexedDb.Index (class RowListToIndices, NonUnique, Unique,
+                       rowListToIndices)
 import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
@@ -199,11 +200,11 @@ index store key v = indexQ store key (toKey v)
 createObjectStore
   ∷ ∀ mode it ir rl a
   . R.RowToList ir rl
-  ⇒ LabelsToList rl
+  ⇒ RowListToIndices rl
   ⇒ Store it ir a
   → Transaction (versionchange ∷ VersionChange | mode) IDBObjectStore
 createObjectStore (Store { name, keyPath }) = liftF
-  $ CreateObjectStore name (KeyPath keyPath) (labelsToList (RLProxy ∷ RLProxy rl)) id
+  $ CreateObjectStore name (KeyPath keyPath) (rowListToIndices (RLProxy ∷ RLProxy rl)) id
 
 -- The implementation here ensures that all requests are run within
 -- the same transaction.
