@@ -9,6 +9,7 @@ module IndexedDb.Request
   , delete
   , get
   , index
+  , indexNonUnique
   , put
   , objectStore
   , open
@@ -75,6 +76,10 @@ get store key = makeRequest (\e s → runFn6 getImpl Nothing Just store key e s)
 index ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Maybe Json)
 index store indexName v = makeRequest
   (\e s → runFn7 indexImpl Nothing Just store indexName v e s)
+
+indexNonUnique ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Array Json)
+indexNonUnique store indexName v = makeRequest
+  (\e s → runFn5 indexNonUniqueImpl store indexName v e s)
 
 put ∷ ∀ eff. IDBObjectStore → Json → Request (idb ∷ IDB | eff) Unit
 put store item = makeRequest (putImpl store item)
@@ -167,6 +172,16 @@ foreign import indexImpl
   Key -- the value, really should be Foreign
   (DOMException → Eff (idb ∷ IDB | eff) Unit)
   (Maybe Json → Eff (idb ∷ IDB | eff) Unit)
+  (Eff (idb ∷ IDB | eff) Unit)
+
+foreign import indexNonUniqueImpl
+  ∷ forall eff.
+  Fn5
+  IDBObjectStore
+  String -- the index name
+  Key -- the value, really should be Foreign
+  (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  (Array Json → Eff (idb ∷ IDB | eff) Unit)
   (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import putImpl

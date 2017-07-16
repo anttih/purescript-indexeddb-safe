@@ -143,6 +143,26 @@ exports.indexImpl = function (nothing, just, store, indexName, key, error, succe
   };
 };
 
+exports.indexNonUniqueImpl = function (store, indexName, key, error, success) {
+  return function () {
+    var index = store.index(indexName)
+    var req = index.openCursor(key)
+    var items = [];
+    req.onsuccess = function (event) {
+      var cursor = event.target.result;
+      if (cursor) {
+        items.push(cursor.value);
+        cursor.continue();
+      } else {
+        success(items)();
+      }
+    };
+    req.onerror = function () {
+      error(req.error)();
+    };
+  };
+};
+
 exports.putImpl = function (store) {
   return function (item) {
     return function (error) {

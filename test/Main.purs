@@ -16,19 +16,33 @@ import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
 import IndexedDb (Database(Database), IDB, Request, Store, Transaction, Version(Version), VersionMigration(VersionMigration))
 import IndexedDb as I
-import IndexedDb.Store (Unique)
+import IndexedDb.Index (NonUnique, Unique)
 import IndexedDb.Transaction (Read, Write, VersionChangeTx)
 import Test.Spec (SpecEffects, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 import Test.Spec.Mocha (MOCHA, runMocha)
 
-codec ∷ JsonCodec { id ∷ Int, value ∷ String }
-codec = JA.object "Test record" $ JA.record
+codec ∷ JsonCodec { id ∷ Int
+                  , slug ∷ String
+                  , artist ∷ String
+                  , album ∷ String
+                  , year ∷ Int
+                  }
+codec = JA.object "Albums" $ JA.record
   # JA.recordProp (SProxy ∷ SProxy "id") JA.int
-  # JA.recordProp (SProxy ∷ SProxy "value") JA.string
+  # JA.recordProp (SProxy ∷ SProxy "slug") JA.string
+  # JA.recordProp (SProxy ∷ SProxy "artist") JA.string
+  # JA.recordProp (SProxy ∷ SProxy "album") JA.string
+  # JA.recordProp (SProxy ∷ SProxy "year") JA.int
 
-testStore ∷ Store Int { value ∷ Unique } { id ∷ Int, value ∷ String }
-testStore = I.mkStore "test_store" (SProxy ∷ SProxy "id") codec
+testStore ∷ Store Int ( slug ∷ Unique, artist ∷ NonUnique )
+                      ( id ∷ Int
+                      , slug ∷ String
+                      , artist ∷ String
+                      , album ∷ String
+                      , year ∷ Int
+                      )
+testStore = I.mkStore "albums" (SProxy ∷ SProxy "id") codec
 
 runTx ∷ ∀ eff a. Transaction (read ∷ Read, write ∷ Write) a → Request (idb ∷ IDB | eff) a
 runTx tx = do
@@ -54,7 +68,7 @@ main = runMocha do
   describe "Basic operations on an object store" do
     it "can get a record that was stored" do
       res ← liftReq $ runTx do
-        I.add testStore {id: 1, value: "Hello, world"}
+        I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
         I.get testStore 1
       (_.id <$> res) `shouldEqual` (Just 1) 
     it "returns Nothing when item is not found" do
@@ -63,26 +77,34 @@ main = runMocha do
       (unit <$ res) `shouldEqual` Nothing
     it "cannot find a record that is deleted in the same tx" do
       res ← liftReq $ runTx do
-        I.add testStore {id: 1, value: "Test value"}
+        I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
         I.delete testStore 1
         I.get testStore 1
       (unit <$ res) `shouldEqual` Nothing
     it "updates a record field when passed to put as different" do
       res ← liftReq $ runTx do
-        I.add testStore {id: 2, value: "Boom"}
-        I.put testStore {id: 2, value: "Changed!"}
+        I.add testStore {id: 2, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1996}
+        I.put testStore {id: 2, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
         I.get testStore 2
-      (_.value <$> res) `shouldEqual` (Just "Changed!")
+      (_.year <$> res) `shouldEqual` (Just 1995)
 
     describe "Indices" do
-      it "can fetch a record using an index" do
+      it "can fetch a record using a unique index" do
         res ← liftReq $ runTx do
-          I.add testStore {id: 2, value: "Boom"}
-          I.index testStore (SProxy ∷ SProxy "value") "Boom"
-        (_.value <$> res) `shouldEqual` (Just "Boom")
+          I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
+          I.index testStore (SProxy ∷ SProxy "slug") "toto-tambu"
+        (_.id <$> res) `shouldEqual` (Just 1)
 
       it "returns Nothing when a record is not found using a unique index" do
         res ← liftReq $ runTx do
-          I.add testStore {id: 1, value: "Value"}
-          I.index testStore (SProxy ∷ SProxy "value") "Not found"
-        (_.value <$> res) `shouldEqual` Nothing
+          I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
+          I.index testStore (SProxy ∷ SProxy "slug") "Not found"
+        (_.id <$> res) `shouldEqual` Nothing
+
+      it "returns all records matching a non-unique index" do
+        res ← liftReq $ runTx do
+          I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
+          I.add testStore {id: 2, slug: "toto-mindfields", artist: "Toto", album: "Mindfields", year: 1999}
+          I.index testStore (SProxy ∷ SProxy "artist") "Toto"
+        (_.year <$> res) `shouldEqual` [1995, 1999]
+
