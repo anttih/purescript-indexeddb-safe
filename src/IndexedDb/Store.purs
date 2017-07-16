@@ -11,14 +11,7 @@ import IndexedDb.Key (class IsKey)
 import IndexedDb.Type.Row (class HasLabels)
 import Type.Row (class RowToList)
 
--- foreign import kind IndexType
--- foreign import data Unique ∷ IndexType
-
 type ForeignCodec a = BasicCodec F Foreign a
-
--- newtype Codec a = Codec { encode ∷ a → Foreign
---                         , decode ∷ Foreign → F a
---                         }
 
 newtype Store k (ir ∷ # Type) (r ∷ # Type)
   = Store { name ∷ String, keyPath ∷ String, codec ∷ ForeignCodec (Record r) }
