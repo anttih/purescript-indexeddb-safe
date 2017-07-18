@@ -7,7 +7,6 @@ module IndexedDb.Transaction
   , Write
   , VersionChange
   , class IndexQuery
-  , indexQ
   , add
   , createObjectStore
   , delete
@@ -152,11 +151,15 @@ delete ∷ ∀ mode it ir a. IsKey it ⇒ Store it ir a → it → Transaction (
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
 
 class IndexQuery (ir ∷ # Type) (r ∷ # Type) (label :: Symbol) o where
-  indexQ
-    ∷ ∀ mode it
-    . Store it ir r
+  index
+    ∷ ∀ value mode it ignore1 ignore2 ignore3
+    . IsKey value
+    ⇒ IsSymbol label
+    ⇒ RowCons label value ignore1 r -- get the type of value
+    ⇒ RowCons label ignore2 ignore3 ir -- check that label is a label in the index row
+    ⇒ Store it ir r
     → SProxy label
-    → Key
+    → value
     → Transaction mode (o (Record r))
 
 instance indexQueryUnique
@@ -164,8 +167,8 @@ instance indexQueryUnique
     , RowCons label Unique ir1 ir2
     )
   => IndexQuery ir2 r label Maybe where
-  indexQ (Store { name, codec }) key v = liftF
-    $ IndexUnique (StoreName name) (reflectSymbol key) v dec
+  index (Store { name, codec }) key v = liftF
+    $ IndexUnique (StoreName name) (reflectSymbol key) (toKey v) dec
 
     where
     dec ∷ Maybe Foreign → F (Maybe (Record r))
@@ -178,21 +181,8 @@ instance indexQueryNonUnique
     , RowCons label NonUnique ir1 ir2
     )
   => IndexQuery ir2 r label Array where
-  indexQ (Store { name, codec }) key v = liftF
-    $ IndexNonUnique (StoreName name) (reflectSymbol key) v (traverse (Codec.decode codec))
-
-index
-  ∷ ∀ mode it label value r r2 a t ir o
-  . IsKey value
-  ⇒ IsSymbol label
-  ⇒ RowCons label value r a -- get the type of value
-  ⇒ RowCons label t r2 ir -- check that label is a label in the index row
-  ⇒ IndexQuery ir a label o
-  ⇒ Store it ir a
-  → SProxy label
-  → value
-  → Transaction (read ∷ Read | mode) (o (Record a))
-index store key v = indexQ store key (toKey v)
+  index (Store { name, codec }) key v = liftF
+    $ IndexNonUnique (StoreName name) (reflectSymbol key) (toKey v) (traverse (Codec.decode codec))
 
 -- | Create an object store.
 createObjectStore
