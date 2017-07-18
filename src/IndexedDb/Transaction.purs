@@ -150,6 +150,21 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
 delete ∷ ∀ mode it ir a. IsKey it ⇒ Store it ir a → it → Transaction (write ∷ Write | mode) Unit
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
 
+-- | Create an object store.
+createObjectStore
+  ∷ ∀ mode it ir rl a
+  . R.RowToList ir rl
+  ⇒ RowListToIndices rl
+  ⇒ Store it ir a
+  → Transaction (versionchange ∷ VersionChange | mode) IDBObjectStore
+createObjectStore (Store { name, keyPath }) = liftF
+  $ CreateObjectStore name (KeyPath keyPath) (rowListToIndices (RLProxy ∷ RLProxy rl)) id
+
+
+-- | Class which implements a safe index function for the possible different
+-- | index types: unique and non-unique. The return type is different between
+-- | unique and non-unique indices: a unique index returns at most one record,
+-- | while a non-unique index returns possibly many records.
 class IndexQuery (ir ∷ # Type) (r ∷ # Type) (label :: Symbol) o where
   index
     ∷ ∀ value mode it ignore1 ignore2 ignore3
@@ -183,16 +198,6 @@ instance indexQueryNonUnique
   => IndexQuery ir2 r label Array where
   index (Store { name, codec }) key v = liftF
     $ IndexNonUnique (StoreName name) (reflectSymbol key) (toKey v) (traverse (Codec.decode codec))
-
--- | Create an object store.
-createObjectStore
-  ∷ ∀ mode it ir rl a
-  . R.RowToList ir rl
-  ⇒ RowListToIndices rl
-  ⇒ Store it ir a
-  → Transaction (versionchange ∷ VersionChange | mode) IDBObjectStore
-createObjectStore (Store { name, keyPath }) = liftF
-  $ CreateObjectStore name (KeyPath keyPath) (rowListToIndices (RLProxy ∷ RLProxy rl)) id
 
 -- The implementation here ensures that all requests are run within
 -- the same transaction.
