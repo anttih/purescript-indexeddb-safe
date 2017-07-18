@@ -175,7 +175,7 @@ class IndexQuery (ir ∷ # Type) (r ∷ # Type) (label :: Symbol) o where
     ⇒ Store it ir r
     → SProxy label
     → value
-    → Transaction mode (o (Record r))
+    → Transaction (read ∷ Read | mode) (o (Record r))
 
 instance indexQueryUnique
   ∷ ( IsSymbol label
