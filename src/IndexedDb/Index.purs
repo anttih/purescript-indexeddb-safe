@@ -10,10 +10,12 @@ data Unique
 -- | Type for a non-unique index
 data NonUnique
 
+type IndexSpec = { name ∷ String, unique ∷ Boolean }
+
 -- | Transforms a type-level row of index definitions into
 -- | a term-level list of indices.
 class RowListToIndices (rl ∷ RowList) where
-  rowListToIndices ∷ RLProxy rl → List.List { name ∷ String, unique ∷ Boolean }
+  rowListToIndices ∷ RLProxy rl → List.List IndexSpec
 
 instance rowListToIndexTypesNil ∷ RowListToIndices Nil where
   rowListToIndices _ = List.Nil

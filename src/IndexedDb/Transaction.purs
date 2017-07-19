@@ -35,7 +35,7 @@ import Data.List.NonEmpty (NonEmptyList, head)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import Data.Traversable (traverse)
-import IndexedDb.Index (class RowListToIndices, NonUnique, Unique, rowListToIndices)
+import IndexedDb.Index (class RowListToIndices, NonUnique, Unique, IndexSpec, rowListToIndices)
 import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
@@ -57,7 +57,7 @@ data TransactionF (r ∷ # Type) a
   | Get StoreName Key (Maybe Foreign → F a)
   | Delete StoreName Key a
   | Put StoreName Foreign a
-  | CreateObjectStore String KeyPath (List.List { name ∷ String, unique ∷ Boolean}) (IDBObjectStore → a)
+  | CreateObjectStore String KeyPath (List.List IndexSpec) (IDBObjectStore → a)
   | IndexUnique StoreName String Key (Maybe Foreign → F a)
   | IndexNonUnique StoreName String Key (Array Foreign → F a)
 
