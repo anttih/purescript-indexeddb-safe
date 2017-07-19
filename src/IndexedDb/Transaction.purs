@@ -40,7 +40,6 @@ import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
 import IndexedDb.Store (Store(Store))
-import IndexedDb.Type.Row (RLProxy(..))
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore, IDBTransaction, KeyPath(KeyPath), StoreName(StoreName), TxMode(TxMode), Version)
 import Type.Row as R
 
@@ -158,7 +157,7 @@ createObjectStore
   ⇒ Store it ir a
   → Transaction (versionchange ∷ VersionChange | mode) IDBObjectStore
 createObjectStore (Store { name, keyPath }) = liftF
-  $ CreateObjectStore name (KeyPath keyPath) (rowListToIndices (RLProxy ∷ RLProxy rl)) id
+  $ CreateObjectStore name (KeyPath keyPath) (rowListToIndices (R.RLProxy ∷ R.RLProxy rl)) id
 
 
 -- | Class which implements a safe index function for the possible different

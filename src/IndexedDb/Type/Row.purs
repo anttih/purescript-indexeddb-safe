@@ -1,13 +1,9 @@
 module IndexedDb.Type.Row
   ( class HasLabels
   , class RowType
-  , RLProxy(..)
   ) where
 
 import Type.Row (kind RowList, Nil, Cons)
-import Type.Row as R
-
-data RLProxy (rl ∷ R.RowList) = RLProxy
 
 -- | Ensures that the labels on the left side are present in the
 -- | row on the right.
