@@ -178,9 +178,7 @@ class IndexQuery (ir ∷ # Type) (r ∷ # Type) (label :: Symbol) o where
     → Transaction (read ∷ Read | mode) (o (Record r))
 
 instance indexQueryUnique
-  ∷ ( IsSymbol label
-    , RowCons label Unique ir1 ir2
-    )
+  ∷ ( RowCons label Unique ir1 ir2 )
   => IndexQuery ir2 r label Maybe where
   index (Store { name, codec }) key v = liftF
     $ IndexUnique (StoreName name) (reflectSymbol key) (toKey v) dec
@@ -192,9 +190,7 @@ instance indexQueryUnique
             Just item → pure <$> Codec.decode codec item
 
 instance indexQueryNonUnique
-  ∷ ( IsSymbol label
-    , RowCons label NonUnique ir1 ir2
-    )
+  ∷ ( RowCons label NonUnique ir1 ir2 )
   => IndexQuery ir2 r label Array where
   index (Store { name, codec }) key v = liftF
     $ IndexNonUnique (StoreName name) (reflectSymbol key) (toKey v) (traverse (Codec.decode codec))
