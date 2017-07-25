@@ -8,6 +8,7 @@ module IndexedDb.Request
   , deleteDatabase
   , delete
   , get
+  , getAll'
   , index
   , indexNonUnique
   , put
@@ -23,7 +24,7 @@ import Control.Monad.Except (ExceptT(..))
 import DOM.Exception (DOMException)
 import Data.Either (Either(..))
 import Data.Foreign (Foreign)
-import Data.Function.Uncurried (Fn5, Fn6, Fn7, runFn5, runFn6, runFn7)
+import Data.Function.Uncurried (Fn3, Fn5, Fn6, Fn7, runFn3, runFn5, runFn6, runFn7)
 import Data.Maybe (Maybe(..))
 import IndexedDb.Key (Key)
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
@@ -72,6 +73,9 @@ add store item = makeRequest (addImpl store item)
 
 get ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) (Maybe Foreign)
 get store key = makeRequest (\e s → runFn6 getImpl Nothing Just store key e s)
+
+getAll' ∷ ∀ eff. IDBObjectStore → Request (idb ∷ IDB | eff) (Array Foreign)
+getAll' store = makeRequest (\e s → runFn3 getAllImpl store e s)
 
 index ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Maybe Foreign)
 index store indexName v = makeRequest
@@ -160,6 +164,14 @@ foreign import getImpl
   Key
   (DOMException → Eff (idb ∷ IDB | eff) Unit)
   (Maybe Foreign → Eff (idb ∷ IDB | eff) Unit)
+  (Eff (idb ∷ IDB | eff) Unit)
+
+foreign import getAllImpl
+  ∷ forall eff.
+  Fn3
+  IDBObjectStore
+  (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  (Array Foreign → Eff (idb ∷ IDB | eff) Unit)
   (Eff (idb ∷ IDB | eff) Unit)
 
 foreign import indexImpl

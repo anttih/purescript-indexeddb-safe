@@ -11,6 +11,7 @@ module IndexedDb.Transaction
   , createObjectStore
   , delete
   , get
+  , getAll'
   , index
   , open
   , put
@@ -55,6 +56,7 @@ data VersionChange
 data TransactionF (r ∷ # Type) a
   = Add StoreName Foreign a
   | Get StoreName Key (Maybe Foreign → F a)
+  | GetAll StoreName (Array Foreign → F a)
   | Delete StoreName Key a
   | Put StoreName Foreign a
   | CreateObjectStore String KeyPath (List.List IndexSpec) (IDBObjectStore → a)
@@ -85,7 +87,7 @@ runReadTx
   → Array (Store k ir b)
   → Transaction (read ∷ Read) a
   → Request (idb :: IDB | eff) a
-runReadTx = runTx (TxMode "read")
+runReadTx = runTx (TxMode "readonly")
 
 -- | Run a transaction in `readwrite` mode
 runReadWriteTx
@@ -144,6 +146,9 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
   dec = case _ of
           Nothing → pure Nothing
           Just item → pure <$> Codec.decode codec item
+
+getAll' ∷ ∀ mode it ir a. Store it ir a → Transaction (read ∷ Read | mode) (Array (Record a))
+getAll' (Store { name, codec }) = liftF $ GetAll (StoreName name) (traverse (Codec.decode codec))
 
 -- | Deletes a record by the primary key.
 delete ∷ ∀ mode it ir a. IsKey it ⇒ Store it ir a → it → Transaction (write ∷ Write | mode) Unit
@@ -205,6 +210,12 @@ evalTx idb tx = case _ of
   Get storeName key f → do
     store ← Req.objectStore storeName tx
     res ← Req.get store key
+    case runExcept (f res) of
+      Left e → liftAff $ throwError (error (show e))
+      Right a → pure a
+  GetAll storeName f → do
+    store ← Req.objectStore storeName tx
+    res ← Req.getAll' store
     case runExcept (f res) of
       Left e → liftAff $ throwError (error (show e))
       Right a → pure a
