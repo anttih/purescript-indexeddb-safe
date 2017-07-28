@@ -142,6 +142,18 @@ exports.getAllImpl = function (store, error, success) {
   };
 };
 
+exports.getAllByKeyImpl = function (store, key, error, success) {
+  return function () {
+    var req = store.getAll(key);
+    req.onsuccess = function () {
+      success(req.result)();
+    };
+    req.onerror = function () {
+      error(req.error)();
+    };
+  };
+};
+
 exports.indexImpl = function (nothing, just, store, indexName, key, error, success) {
   return function () {
     var index = store.index(indexName)

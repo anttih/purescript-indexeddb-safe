@@ -12,6 +12,7 @@ module IndexedDb.Transaction
   , delete
   , get
   , getAll'
+  , getAll
   , index
   , open
   , put
@@ -30,14 +31,16 @@ import Control.Monad.Free (Free, foldFree, liftF)
 import DOM.Exception (DOMException)
 import Data.Codec as Codec
 import Data.Either (Either(Right, Left))
+import Data.Exists as Exists
 import Data.Foreign (F, Foreign)
 import Data.List as List
 import Data.List.NonEmpty (NonEmptyList, head)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 import Data.Traversable (traverse)
 import IndexedDb.Index (class RowListToIndices, NonUnique, Unique, IndexSpec, rowListToIndices)
 import IndexedDb.Key (class IsKey, Key, toKey)
+import IndexedDb.KeyRange (KeyRange)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
 import IndexedDb.Store (Store(Store))
@@ -56,7 +59,7 @@ data VersionChange
 data TransactionF (r ∷ # Type) a
   = Add StoreName Foreign a
   | Get StoreName Key (Maybe Foreign → F a)
-  | GetAll StoreName (Array Foreign → F a)
+  | GetAll StoreName (Maybe (Exists.Exists KeyRange)) (Array Foreign → F a)
   | Delete StoreName Key a
   | Put StoreName Foreign a
   | CreateObjectStore String KeyPath (List.List IndexSpec) (IDBObjectStore → a)
@@ -147,8 +150,20 @@ get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
           Nothing → pure Nothing
           Just item → pure <$> Codec.decode codec item
 
+-- | Get all records ordered by the primary key
 getAll' ∷ ∀ mode it ir a. Store it ir a → Transaction (read ∷ Read | mode) (Array (Record a))
-getAll' (Store { name, codec }) = liftF $ GetAll (StoreName name) (traverse (Codec.decode codec))
+getAll' (Store { name, codec }) = liftF
+  $ GetAll (StoreName name) Nothing (traverse (Codec.decode codec))
+
+-- | Get all records matching a value on the primary key
+getAll
+  ∷ ∀ mode it ir a
+  . IsKey it
+  ⇒ Store it ir a
+  → KeyRange it
+  → Transaction (read ∷ Read | mode) (Array (Record a))
+getAll (Store { name, codec }) v = liftF
+  $ GetAll (StoreName name) (Just (Exists.mkExists v)) (traverse (Codec.decode codec))
 
 -- | Deletes a record by the primary key.
 delete ∷ ∀ mode it ir a. IsKey it ⇒ Store it ir a → it → Transaction (write ∷ Write | mode) Unit
@@ -213,9 +228,9 @@ evalTx idb tx = case _ of
     case runExcept (f res) of
       Left e → liftAff $ throwError (error (show e))
       Right a → pure a
-  GetAll storeName f → do
+  GetAll storeName key f → do
     store ← Req.objectStore storeName tx
-    res ← Req.getAll' store
+    res ← maybe (Req.getAll' store) (Exists.runExists (Req.getAll store)) key
     case runExcept (f res) of
       Left e → liftAff $ throwError (error (show e))
       Right a → pure a

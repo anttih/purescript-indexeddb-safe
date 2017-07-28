@@ -17,6 +17,7 @@ import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
 import IndexedDb (Database(Database), IDB, Request, Store, Transaction, Unique, NonUnique, Read, Write, VersionChangeTx, Version(Version), VersionMigration(VersionMigration))
 import IndexedDb as I
+import IndexedDb.KeyRange as KeyRange
 import IndexedDb.Store (ForeignCodec)
 import Test.Spec (SpecEffects, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -91,7 +92,7 @@ main = runMocha do
         I.put testStore {id: 2, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
         I.get testStore 2
       (_.year <$> res) `shouldEqual` (Just 1995)
-    it "returns all records" do
+    it "returns all records with getAll'" do
       res ← liftReq $ runTx do
         I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
         I.add testStore {id: 2, slug: "toto-mindfields", artist: "Toto", album: "Mindfields", year: 1999}
@@ -118,3 +119,11 @@ main = runMocha do
           I.index testStore (SProxy ∷ SProxy "artist") "Toto"
         (_.year <$> res) `shouldEqual` [1995, 1999]
 
+      it "returns all records greater than some value with getAll lowerBound" do
+        res ← liftReq $ runTx do
+          I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
+          I.add testStore {id: 2, slug: "toto-mindfields", artist: "Toto", album: "Mindfields", year: 1999}
+          I.add testStore {id: 3, slug: "toto-falling", artist: "Toto", album: "Falling In Between", year: 2006}
+          I.add testStore {id: 4, slug: "toto-XIV", artist: "Toto", album: "Toto XIV", year: 2015}
+          I.getAll testStore (KeyRange.lowerBound 2)
+        (_.year <$> res) `shouldEqual` [2006, 2015]
