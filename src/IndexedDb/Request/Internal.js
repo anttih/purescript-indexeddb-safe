@@ -30,29 +30,23 @@ exports.close = function (idb) {
   };
 };
 
-exports.deleteDatabase = function (dbName) {
-  return function (error) {
-    return function (success) {
-      return function () {
-        try {
-          var req = indexedDB.deleteDatabase(dbName);
-          req.onerror = function () {
-            error(req.error)();
-          };
-          req.onsuccess = function (e) {
-            success({})();
-          };
-        } catch (e) {
-          if (e instanceof DOMException) {
-            return error(e)();
-          } else {
-            throw e;
-          }
-        }
-      }
+exports.deleteDatabase = function (dbName, error, success) {
+  try {
+    var req = indexedDB.deleteDatabase(dbName);
+    req.onerror = function () {
+      error(req.error)();
+    };
+    req.onsuccess = function (e) {
+      success({})();
+    };
+  } catch (e) {
+    if (e instanceof DOMException) {
+      return error(e)();
+    } else {
+      throw e;
     }
   }
-};
+}
 
 exports.transaction = function (db, stores, flag, error, success) {
   try {

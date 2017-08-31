@@ -59,7 +59,7 @@ close ∷ ∀ eff. IDBDatabase → Request (idb ∷ IDB | eff) Unit
 close = liftEff <<< Internal.close
 
 deleteDatabase ∷ ∀ eff. Database → Request (idb ∷ IDB | eff) Unit
-deleteDatabase db = makeRequest (Internal.deleteDatabase db)
+deleteDatabase db = makeRequest (runEffFn3 Internal.deleteDatabase db)
 
 transaction
   ∷ ∀ eff

@@ -24,11 +24,12 @@ foreign import open
 foreign import close ∷ ∀ eff. IDBDatabase → Eff (idb ∷ IDB | eff) Unit
 
 foreign import deleteDatabase
-  ∷ forall eff
-  . Database
-  → (DOMException → Eff (idb ∷ IDB | eff) Unit)
-  → (Unit → Eff (idb ∷ IDB | eff) Unit)
-  → Eff (idb ∷ IDB | eff) Unit
+  ∷ forall eff.
+  EffFn3 (idb ∷ IDB | eff)
+  Database
+  (DOMException → Eff (idb ∷ IDB | eff) Unit)
+  (Unit → Eff (idb ∷ IDB | eff) Unit)
+  Unit
 
 foreign import transaction
   ∷ forall eff.
