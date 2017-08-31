@@ -11,7 +11,7 @@ import IndexedDb.KeyRange (KeyRange)
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
 import Prelude hiding (add)
 
-foreign import openImpl
+foreign import open
   ∷ forall eff.
   EffFn5 (idb ∷ IDB | eff)
   Database
@@ -21,16 +21,16 @@ foreign import openImpl
   (IDBDatabase → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import closeImpl ∷ ∀ eff. IDBDatabase → Eff (idb ∷ IDB | eff) Unit
+foreign import close ∷ ∀ eff. IDBDatabase → Eff (idb ∷ IDB | eff) Unit
 
-foreign import deleteDatabaseImpl
+foreign import deleteDatabase
   ∷ forall eff
   . Database
   → (DOMException → Eff (idb ∷ IDB | eff) Unit)
   → (Unit → Eff (idb ∷ IDB | eff) Unit)
   → Eff (idb ∷ IDB | eff) Unit
 
-foreign import transactionImpl
+foreign import transaction
   ∷ forall eff.
   EffFn5
   (idb ∷ IDB | eff)
@@ -41,7 +41,7 @@ foreign import transactionImpl
   (IDBTransaction → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import objectStoreImpl
+foreign import objectStore
   ∷ forall eff.
   EffFn2
   (idb ∷ IDB | eff)
@@ -49,7 +49,7 @@ foreign import objectStoreImpl
   IDBTransaction
   IDBObjectStore
 
-foreign import addImpl
+foreign import add
   ∷ forall eff.
   EffFn4
   (idb ∷ IDB | eff)
@@ -59,7 +59,7 @@ foreign import addImpl
   (Unit → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import getImpl
+foreign import get
   ∷ forall eff a.
   EffFn6 (idb ∷ IDB | eff)
   (Maybe a) -- The value Nothing
@@ -70,7 +70,7 @@ foreign import getImpl
   (Maybe Foreign → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import getAllImpl
+foreign import getAll
   ∷ forall eff.
   EffFn3 (idb ∷ IDB | eff)
   IDBObjectStore
@@ -78,7 +78,7 @@ foreign import getAllImpl
   (Array Foreign → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import getAllByKeyImpl
+foreign import getAllByKey
   ∷ forall eff a.
   EffFn4 (idb ∷ IDB | eff)
   IDBObjectStore
@@ -87,7 +87,7 @@ foreign import getAllByKeyImpl
   (Array Foreign → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import indexImpl
+foreign import index
   ∷ forall eff a.
   EffFn7 (idb ∷ IDB | eff)
   (Maybe a) -- The value Nothing
@@ -99,7 +99,7 @@ foreign import indexImpl
   (Maybe Foreign → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import indexNonUniqueImpl
+foreign import indexNonUnique
   ∷ forall eff.
   EffFn5 (idb ∷ IDB | eff)
   IDBObjectStore
@@ -109,7 +109,7 @@ foreign import indexNonUniqueImpl
   (Array Foreign → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import putImpl
+foreign import put
   ∷ forall eff.
   EffFn4 (idb ∷ IDB | eff)
   IDBObjectStore
@@ -118,7 +118,7 @@ foreign import putImpl
   (Unit → Eff (idb ∷ IDB | eff) Unit)
   Unit
 
-foreign import createObjectStoreImpl
+foreign import createObjectStore
   ∷ forall eff.
   EffFn5 (idb ∷ IDB | eff)
   (DOMException → Either DOMException IDBObjectStore)
@@ -128,7 +128,7 @@ foreign import createObjectStoreImpl
   KeyPath
   (Either DOMException IDBObjectStore)
 
-foreign import createIndexImpl
+foreign import createIndex
   ∷ forall eff.
   EffFn6 (idb ∷ IDB | eff)
   (DOMException → Either DOMException IDBObjectStore)
@@ -139,7 +139,7 @@ foreign import createIndexImpl
   Boolean
   (Either DOMException IDBIndex)
 
-foreign import deleteImpl
+foreign import delete
   ∷ forall eff.
   EffFn4 (idb ∷ IDB | eff)
   IDBObjectStore

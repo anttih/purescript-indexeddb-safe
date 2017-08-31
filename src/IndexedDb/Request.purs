@@ -53,13 +53,13 @@ open
   → Version
   → (VersionChangeEventInit → IDBDatabase → IDBTransaction → Eff (idb ∷ IDB | eff) Unit)
   → Request (idb ∷ IDB | eff) IDBDatabase
-open db v f = makeRequest (\e s → runEffFn5 Internal.openImpl db v f e s)
+open db v f = makeRequest (\e s → runEffFn5 Internal.open db v f e s)
 
 close ∷ ∀ eff. IDBDatabase → Request (idb ∷ IDB | eff) Unit
-close = liftEff <<< Internal.closeImpl
+close = liftEff <<< Internal.close
 
 deleteDatabase ∷ ∀ eff. Database → Request (idb ∷ IDB | eff) Unit
-deleteDatabase db = makeRequest (Internal.deleteDatabaseImpl db)
+deleteDatabase db = makeRequest (Internal.deleteDatabase db)
 
 transaction
   ∷ ∀ eff
@@ -68,33 +68,33 @@ transaction
   → TxMode
   → Request (idb ∷ IDB | eff) IDBTransaction
 transaction db stores flag = makeRequest
-  (\e s → runEffFn5 Internal.transactionImpl db stores flag e s)
+  (\e s → runEffFn5 Internal.transaction db stores flag e s)
 
 objectStore ∷ ∀ eff. StoreName → IDBTransaction → Request (idb :: IDB | eff) IDBObjectStore
-objectStore store tsx = liftEff (runEffFn2 Internal.objectStoreImpl store tsx)
+objectStore store tsx = liftEff (runEffFn2 Internal.objectStore store tsx)
 
 add ∷ ∀ eff. IDBObjectStore → Foreign → Request (idb ∷ IDB | eff) Unit
-add store item = makeRequest (runEffFn4 Internal.addImpl store item)
+add store item = makeRequest (runEffFn4 Internal.add store item)
 
 get ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) (Maybe Foreign)
-get store key = makeRequest (\e s → runEffFn6 Internal.getImpl Nothing Just store key e s)
+get store key = makeRequest (\e s → runEffFn6 Internal.get Nothing Just store key e s)
 
 getAll' ∷ ∀ eff. IDBObjectStore → Request (idb ∷ IDB | eff) (Array Foreign)
-getAll' store = makeRequest (\e s → runEffFn3 Internal.getAllImpl store e s)
+getAll' store = makeRequest (\e s → runEffFn3 Internal.getAll store e s)
 
 getAll ∷ ∀ eff a. IDBObjectStore → KeyRange a → Request (idb ∷ IDB | eff) (Array Foreign)
-getAll store key = makeRequest (\e s → runEffFn4 Internal.getAllByKeyImpl store key e s)
+getAll store key = makeRequest (\e s → runEffFn4 Internal.getAllByKey store key e s)
 
 index ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Maybe Foreign)
 index store indexName v = makeRequest
-  (\e s → runEffFn7 Internal.indexImpl Nothing Just store indexName v e s)
+  (\e s → runEffFn7 Internal.index Nothing Just store indexName v e s)
 
 indexNonUnique ∷ ∀ eff. IDBObjectStore → String → Key → Request (idb ∷ IDB | eff) (Array Foreign)
 indexNonUnique store indexName v = makeRequest
-  (\e s → runEffFn5 Internal.indexNonUniqueImpl store indexName v e s)
+  (\e s → runEffFn5 Internal.indexNonUnique store indexName v e s)
 
 put ∷ ∀ eff. IDBObjectStore → Foreign → Request (idb ∷ IDB | eff) Unit
-put store item = makeRequest (runEffFn4 Internal.putImpl store item)
+put store item = makeRequest (runEffFn4 Internal.put store item)
 
 createObjectStore
   ∷ ∀ eff
@@ -104,7 +104,7 @@ createObjectStore
   → Request (idb ∷ IDB | eff) IDBObjectStore
 createObjectStore idb store key = ExceptT
   $ liftEff
-  $ runEffFn5 Internal.createObjectStoreImpl Left Right idb store key
+  $ runEffFn5 Internal.createObjectStore Left Right idb store key
 
 createIndex
   ∷ ∀ eff
@@ -115,7 +115,7 @@ createIndex
   → Request (idb ∷ IDB | eff) IDBIndex
 createIndex store indexName path unique = ExceptT
   $ liftEff
-  $ runEffFn6 Internal.createIndexImpl Left Right store indexName path unique
+  $ runEffFn6 Internal.createIndex Left Right store indexName path unique
 
 delete ∷ ∀ eff. IDBObjectStore → Key → Request (idb ∷ IDB | eff) Unit
-delete store key = makeRequest (runEffFn4 Internal.deleteImpl store key)
+delete store key = makeRequest (runEffFn4 Internal.delete store key)

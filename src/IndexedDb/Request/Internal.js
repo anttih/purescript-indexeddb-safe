@@ -11,7 +11,7 @@ var IDBTransaction = window.IDBTransaction
   || window.OIDBTransaction
   || window.msIDBTransaction;
 
-exports.openImpl = function (dbName, version, upgradeneeded, error, success) {
+exports.open = function (dbName, version, upgradeneeded, error, success) {
   var openReq = indexedDB.open(dbName, version)
   openReq.onerror = function (event) {
     error(openReq.error)();
@@ -24,13 +24,13 @@ exports.openImpl = function (dbName, version, upgradeneeded, error, success) {
   };
 };
 
-exports.closeImpl = function (idb) {
+exports.close = function (idb) {
   return function () {
     idb.close();
   };
 };
 
-exports.deleteDatabaseImpl = function (dbName) {
+exports.deleteDatabase = function (dbName) {
   return function (error) {
     return function (success) {
       return function () {
@@ -54,7 +54,7 @@ exports.deleteDatabaseImpl = function (dbName) {
   }
 };
 
-exports.transactionImpl = function (db, stores, flag, error, success) {
+exports.transaction = function (db, stores, flag, error, success) {
   try {
     var transaction = db.transaction(stores, flag)
   } catch (e) {
@@ -79,11 +79,11 @@ exports.transactionImpl = function (db, stores, flag, error, success) {
   return success(transaction)();
 };
 
-exports.objectStoreImpl = function (name, transaction) {
+exports.objectStore = function (name, transaction) {
   return transaction.objectStore(name);
 };
 
-exports.addImpl = function (store, item, error, success) {
+exports.add = function (store, item, error, success) {
   try {
     var req = store.add(item)
     req.onsuccess = function (e) {
@@ -102,7 +102,7 @@ exports.addImpl = function (store, item, error, success) {
   }
 };
 
-exports.getImpl = function (nothing, just, store, key, error, success) {
+exports.get = function (nothing, just, store, key, error, success) {
   var req = store.get(key)
   req.onsuccess = function () {
     success(req.result === undefined ? nothing : just(req.result))();
@@ -112,7 +112,7 @@ exports.getImpl = function (nothing, just, store, key, error, success) {
   };
 };
 
-exports.getAllImpl = function (store, error, success) {
+exports.getAll = function (store, error, success) {
   var req = store.getAll();
   req.onsuccess = function () {
     success(req.result)();
@@ -122,7 +122,7 @@ exports.getAllImpl = function (store, error, success) {
   };
 };
 
-exports.getAllByKeyImpl = function (store, key, error, success) {
+exports.getAllByKey = function (store, key, error, success) {
   var req = store.getAll(key);
   req.onsuccess = function () {
     success(req.result)();
@@ -132,7 +132,7 @@ exports.getAllByKeyImpl = function (store, key, error, success) {
   };
 };
 
-exports.indexImpl = function (nothing, just, store, indexName, key, error, success) {
+exports.index = function (nothing, just, store, indexName, key, error, success) {
   var index = store.index(indexName)
   var req = index.openCursor(key)
   req.onsuccess = function () {
@@ -143,7 +143,7 @@ exports.indexImpl = function (nothing, just, store, indexName, key, error, succe
   };
 };
 
-exports.indexNonUniqueImpl = function (store, indexName, key, error, success) {
+exports.indexNonUnique = function (store, indexName, key, error, success) {
   var index = store.index(indexName)
   var req = index.openCursor(key)
   var items = [];
@@ -161,7 +161,7 @@ exports.indexNonUniqueImpl = function (store, indexName, key, error, success) {
   };
 };
 
-exports.putImpl = function (store, item, error, success) {
+exports.put = function (store, item, error, success) {
   try {
     var req = store.put(item)
     req.onsuccess = function (e) {
@@ -180,7 +180,7 @@ exports.putImpl = function (store, item, error, success) {
   }
 };
 
-exports.createObjectStoreImpl = function (left, right, db, name, keyPath) {
+exports.createObjectStore = function (left, right, db, name, keyPath) {
   try {
     var store = db.createObjectStore(name, { keyPath: keyPath });
     return right(store);
@@ -193,7 +193,7 @@ exports.createObjectStoreImpl = function (left, right, db, name, keyPath) {
   }
 };
 
-exports.createIndexImpl = function (left, right, db, indexName, keyPath, unique) {
+exports.createIndex = function (left, right, db, indexName, keyPath, unique) {
   try {
     var index = db.createIndex(indexName, keyPath, { unique: unique });
     return right(index);
@@ -206,7 +206,7 @@ exports.createIndexImpl = function (left, right, db, indexName, keyPath, unique)
   }
 };
 
-exports.deleteImpl = function (store, key, error, success) {
+exports.delete = function (store, key, error, success) {
   try {
     var req = store.delete(key)
     req.onsuccess = function (e) {
