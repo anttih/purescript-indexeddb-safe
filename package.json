@@ -6,7 +6,9 @@
   "directories": {
     "test": "test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "pulp": "^11.0.0"
+  },
   "devDependencies": {
     "mocha": "^3.4.2"
   },
