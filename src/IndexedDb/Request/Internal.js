@@ -1,4 +1,4 @@
-// module IndexedDb.Request
+// module IndexedDb.Request.Internal
 
 var indexedDB = window.indexedDB
   || window.webkitIndexedDB
