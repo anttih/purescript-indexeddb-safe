@@ -260,4 +260,3 @@ evalTx idb tx = case _ of
     case runExcept (f res) of
       Left e → liftAff $ throwError (error (show e))
       Right a → pure a
-
