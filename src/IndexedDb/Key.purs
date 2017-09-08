@@ -2,16 +2,16 @@ module IndexedDb.Key where
 
 import Unsafe.Coerce (unsafeCoerce)
 
-foreign import data Key ∷ Type
+foreign import data Key :: Type
 
 class IsKey k where
-  toKey ∷ k → Key
+  toKey :: k -> Key
 
-instance isKeyInt ∷ IsKey Int where
+instance isKeyInt :: IsKey Int where
   toKey = unsafeCoerce
 
-instance isKeyNumber ∷ IsKey Number where
+instance isKeyNumber :: IsKey Number where
   toKey = unsafeCoerce
 
-instance isKeyString ∷ IsKey String where
+instance isKeyString :: IsKey String where
   toKey = unsafeCoerce
