@@ -2,6 +2,7 @@ module IndexedDb.Request
   ( Request
   , abort
   , add
+  , clear
   , close
   , createObjectStore
   , createIndex
@@ -29,8 +30,8 @@ import Data.Foreign (Foreign)
 import Data.Maybe (Maybe(..))
 import IndexedDb.Key (Key)
 import IndexedDb.KeyRange (KeyRange)
-import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
 import IndexedDb.Request.Internal as Internal
+import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
 import Prelude hiding (add)
 
 abort = Internal.abort
@@ -75,6 +76,9 @@ objectStore store tsx = liftEff (runEffFn2 Internal.objectStore store tsx)
 
 add :: forall eff. IDBObjectStore -> Foreign -> Request (idb :: IDB | eff) Unit
 add store item = makeRequest (runEffFn4 Internal.add store item)
+
+clear :: forall eff. IDBObjectStore -> Request (idb :: IDB | eff) Unit
+clear store = makeRequest (\e s -> runEffFn3 Internal.clear store e s)
 
 get :: forall eff. IDBObjectStore -> Key -> Request (idb :: IDB | eff) (Maybe Foreign)
 get store key = makeRequest (\e s -> runEffFn6 Internal.get Nothing Just store key e s)

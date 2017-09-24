@@ -60,6 +60,15 @@ foreign import add
   (Unit -> Eff (idb :: IDB | eff) Unit)
   Unit
 
+foreign import clear
+  :: forall eff.
+  EffFn3
+  (idb :: IDB | eff)
+  IDBObjectStore
+  (DOMException -> Eff (idb :: IDB | eff) Unit)
+  (Unit -> Eff (idb :: IDB | eff) Unit)
+  Unit
+
 foreign import get
   :: forall eff a.
   EffFn6 (idb :: IDB | eff)

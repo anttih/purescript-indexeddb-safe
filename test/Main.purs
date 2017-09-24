@@ -8,6 +8,7 @@ import Control.Monad.Eff.Exception (error)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Except (runExceptT)
 import DOM.Exception (message)
+import Data.Array (length)
 import Data.Codec as Codec
 import Data.Either (either)
 import Data.Foreign (readInt, readString, toForeign)
@@ -98,6 +99,13 @@ main = runMocha do
         I.add testStore {id: 2, slug: "toto-mindfields", artist: "Toto", album: "Mindfields", year: 1999}
         I.getAll' testStore
       (_.id <$> res) `shouldEqual` [1, 2]
+    it "can clear the entire object store" do
+      res <- liftReq $ runTx do
+        I.add testStore {id: 1, slug: "toto-tambu", artist: "Toto", album: "Tambu", year: 1995}
+        I.add testStore {id: 2, slug: "toto-mindfields", artist: "Toto", album: "Mindfields", year: 1999}
+        I.clear testStore
+        I.getAll' testStore
+      length res `shouldEqual` 0
 
     describe "Indices" do
       it "can fetch a record using a unique index" do

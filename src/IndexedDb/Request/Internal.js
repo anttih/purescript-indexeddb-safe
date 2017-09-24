@@ -96,6 +96,25 @@ exports.add = function (store, item, error, success) {
   }
 };
 
+exports.clear = function (store, error, success) {
+  try {
+    var req = store.clear();
+    req.onsuccess = function (e) {
+      success(req.result)();
+    };
+    req.onerror = function (e) {
+      e.stopPropagation();
+      error(req.error)();
+    };
+  } catch (e) {
+    if (e instanceof DOMException) {
+      return error(e)();
+    } else {
+      throw e;
+    }
+  }
+}
+
 exports.get = function (nothing, just, store, key, error, success) {
   var req = store.get(key)
   req.onsuccess = function () {

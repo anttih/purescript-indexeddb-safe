@@ -8,6 +8,7 @@ module IndexedDb.Transaction
   , VersionChange
   , class IndexQuery
   , add
+  , clear
   , createObjectStore
   , delete
   , get
@@ -58,6 +59,7 @@ data VersionChange
 
 data TransactionF (r :: # Type) a
   = Add StoreName Foreign a
+  | Clear StoreName a
   | Get StoreName Key (Maybe Foreign -> F a)
   | GetAll StoreName (Maybe (Exists.Exists KeyRange)) (Array Foreign -> F a)
   | Delete StoreName Key a
@@ -135,6 +137,9 @@ open db version migrations = Req.open db version \versionChange idb itx -> void 
 -- | Adds a record to a store.
 add :: forall mode it ir a. Store it ir a -> Record a -> Transaction (write :: Write | mode) Unit
 add (Store { name, codec }) item = liftF $ Add (StoreName name) (Codec.encode codec item) unit
+
+clear :: forall mode it ir a. Store it ir a -> Transaction (write :: Write | mode) Unit
+clear (Store { name }) = liftF $ Clear (StoreName name) unit
 
 -- | Updates an existing record or adds a new record with a given key.
 put :: forall mode it ir a. Store it ir a -> Record a -> Transaction (write :: Write | mode) Unit
@@ -221,6 +226,10 @@ evalTx idb tx = case _ of
   Add storeName d next -> do
     store <- Req.objectStore storeName tx
     res <- Req.add store d
+    pure next
+  Clear storeName next -> do
+    store <- Req.objectStore storeName tx
+    _ <- Req.clear store
     pure next
   Get storeName key f -> do
     store <- Req.objectStore storeName tx
