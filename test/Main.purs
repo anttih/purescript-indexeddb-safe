@@ -32,13 +32,13 @@ codec :: ForeignCodec { id :: Int
                      }
 codec = Codec.basicCodec dec toForeign
   where
-  dec value = do
-    id <- value ! "id" >>= readInt
-    slug <- value ! "slug" >>= readString
-    artist <- value ! "artist" >>= readString
-    album <- value ! "album" >>= readString
-    year <- value ! "year" >>= readInt
-    pure { id, slug, artist, album, year }
+    dec value = do
+      id <- value ! "id" >>= readInt
+      slug <- value ! "slug" >>= readString
+      artist <- value ! "artist" >>= readString
+      album <- value ! "album" >>= readString
+      year <- value ! "year" >>= readInt
+      pure { id, slug, artist, album, year }
 
 testStore :: Store Int -- The type of the primary key
                   ( slug :: Unique, artist :: NonUnique ) -- Indices
@@ -61,8 +61,8 @@ runTx tx = do
   pure res
 
   where
-  version1 :: VersionChangeTx Unit
-  version1 = void $ I.createObjectStore testStore
+    version1 :: VersionChangeTx Unit
+    version1 = void $ I.createObjectStore testStore
 
 liftReq :: forall e a. Request e a -> Aff e a
 liftReq req = do

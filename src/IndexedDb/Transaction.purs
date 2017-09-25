@@ -82,8 +82,8 @@ runTx mode idb stores tx = do
   foldFree (evalTx idb itx) tx
 
   where
-  storeName :: Store k ir b -> StoreName
-  storeName (Store { name }) = (StoreName name)
+    storeName :: Store k ir b -> StoreName
+    storeName (Store { name }) = (StoreName name)
 
 -- | Run a transaction in `read` mode
 runReadTx
@@ -123,40 +123,56 @@ open db version migrations = Req.open db version \versionChange idb itx -> void 
   runAff (const $ Req.abort itx) (handle itx) (runExceptT req)
 
   where
-  -- TODO: Actually migrate
-  migrate :: Version -> Version -> NonEmptyList VersionMigration -> VersionChangeTx Unit
-  migrate _ _ migrations' = migration $ head migrations'
+    -- TODO: Actually migrate
+    migrate :: Version -> Version -> NonEmptyList VersionMigration -> VersionChangeTx Unit
+    migrate _ _ migrations' = migration $ head migrations'
 
-  handle :: forall a. IDBTransaction -> Either DOMException a -> Eff (idb :: IDB | eff) Unit
-  handle tx' = case _ of
-    -- abort the transaction, this will call the error handler on the IndexedDB open request
-    Left _ -> Req.abort tx'
-    -- All ok, do nothing. The open request onsuccess callback will be called.
-    Right _ -> pure unit
+    handle :: forall a. IDBTransaction -> Either DOMException a -> Eff (idb :: IDB | eff) Unit
+    handle tx' = case _ of
+      -- abort the transaction, this will call the error handler on the IndexedDB open request
+      Left _ -> Req.abort tx'
+      -- All ok, do nothing. The open request onsuccess callback will be called.
+      Right _ -> pure unit
 
 -- | Adds a record to a store.
-add :: forall mode it ir a. Store it ir a -> Record a -> Transaction (write :: Write | mode) Unit
+add
+  :: forall mode it ir a
+   . Store it ir a
+  -> Record a
+  -> Transaction (write :: Write | mode) Unit
 add (Store { name, codec }) item = liftF $ Add (StoreName name) (Codec.encode codec item) unit
 
 clear :: forall mode it ir a. Store it ir a -> Transaction (write :: Write | mode) Unit
 clear (Store { name }) = liftF $ Clear (StoreName name) unit
 
 -- | Updates an existing record or adds a new record with a given key.
-put :: forall mode it ir a. Store it ir a -> Record a -> Transaction (write :: Write | mode) Unit
+put
+  :: forall mode it ir a
+   . Store it ir a
+  -> Record a
+  -> Transaction (write :: Write | mode) Unit
 put (Store { name, codec }) item = liftF
   $ Put (StoreName name) (Codec.encode codec item) unit
 
 -- | Gets a record by the primary key.
-get :: forall mode it ir a. IsKey it => Store it ir a -> it -> Transaction (read :: Read | mode) (Maybe (Record a))
+get
+  :: forall mode it ir a
+   . IsKey it
+  => Store it ir a
+  -> it
+  -> Transaction (read :: Read | mode) (Maybe (Record a))
 get (Store { name, codec }) key = liftF $ Get (StoreName name) (toKey key) dec
   where
-  dec :: Maybe Foreign -> F (Maybe (Record a))
-  dec = case _ of
-          Nothing -> pure Nothing
-          Just item -> pure <$> Codec.decode codec item
+    dec :: Maybe Foreign -> F (Maybe (Record a))
+    dec = case _ of
+            Nothing -> pure Nothing
+            Just item -> pure <$> Codec.decode codec item
 
 -- | Get all records ordered by the primary key
-getAll' :: forall mode it ir a. Store it ir a -> Transaction (read :: Read | mode) (Array (Record a))
+getAll'
+  :: forall mode it ir a
+   . Store it ir a
+  -> Transaction (read :: Read | mode) (Array (Record a))
 getAll' (Store { name, codec }) = liftF
   $ GetAll (StoreName name) Nothing (traverse (Codec.decode codec))
 
@@ -171,7 +187,12 @@ getAll (Store { name, codec }) v = liftF
   $ GetAll (StoreName name) (Just (Exists.mkExists v)) (traverse (Codec.decode codec))
 
 -- | Deletes a record by the primary key.
-delete :: forall mode it ir a. IsKey it => Store it ir a -> it -> Transaction (write :: Write | mode) Unit
+delete
+  :: forall mode it ir a
+   . IsKey it
+  => Store it ir a
+  -> it
+  -> Transaction (write :: Write | mode) Unit
 delete (Store { name }) key = liftF $ Delete (StoreName name) (toKey key) unit
 
 -- | Create an object store.
@@ -206,22 +227,30 @@ instance indexQueryUnique
   => IndexQuery ir2 r label Maybe where
   index (Store { name, codec }) key v = liftF
     $ IndexUnique (StoreName name) (reflectSymbol key) (toKey v) dec
-
     where
-    dec :: Maybe Foreign -> F (Maybe (Record r))
-    dec = case _ of
-            Nothing -> pure Nothing
-            Just item -> pure <$> Codec.decode codec item
+      dec :: Maybe Foreign -> F (Maybe (Record r))
+      dec = case _ of
+              Nothing -> pure Nothing
+              Just item -> pure <$> Codec.decode codec item
 
 instance indexQueryNonUnique
   :: ( RowCons label NonUnique ir1 ir2 )
   => IndexQuery ir2 r label Array where
   index (Store { name, codec }) key v = liftF
-    $ IndexNonUnique (StoreName name) (reflectSymbol key) (toKey v) (traverse (Codec.decode codec))
+    $ IndexNonUnique
+      (StoreName name)
+      (reflectSymbol key)
+      (toKey v)
+      (traverse (Codec.decode codec))
 
 -- The implementation here ensures that all requests are run within
 -- the same transaction.
-evalTx :: forall r eff. IDBDatabase -> IDBTransaction -> (TransactionF r) ~> Request (idb :: IDB | eff)
+evalTx
+  :: forall r eff
+   . IDBDatabase
+  -> IDBTransaction
+  -> TransactionF r
+  ~> Request (idb :: IDB | eff)
 evalTx idb tx = case _ of
   Add storeName d next -> do
     store <- Req.objectStore storeName tx
