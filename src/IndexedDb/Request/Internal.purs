@@ -3,7 +3,6 @@ module IndexedDb.Request.Internal where
 import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Uncurried (EffFn2, EffFn3, EffFn4, EffFn5, EffFn6, EffFn7)
 import DOM.Exception (DOMException)
-import Data.Either (Either)
 import Data.Foreign (Foreign)
 import Data.Maybe (Maybe)
 import IndexedDb.Key (Key)
