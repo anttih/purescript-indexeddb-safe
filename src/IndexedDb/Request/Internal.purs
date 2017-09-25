@@ -131,23 +131,23 @@ foreign import put
 foreign import createObjectStore
   :: forall eff.
   EffFn5 (idb :: IDB | eff)
-  (DOMException -> Either DOMException IDBObjectStore)
-  (IDBObjectStore -> Either DOMException IDBObjectStore)
   IDBDatabase
   String
   KeyPath
-  (Either DOMException IDBObjectStore)
+  (DOMException -> Eff (idb :: IDB | eff) Unit)
+  (IDBObjectStore -> Eff (idb :: IDB | eff) Unit)
+  Unit
 
 foreign import createIndex
   :: forall eff.
   EffFn6 (idb :: IDB | eff)
-  (DOMException -> Either DOMException IDBObjectStore)
-  (IDBObjectStore -> Either DOMException IDBObjectStore)
   IDBObjectStore
   String
   KeyPath
   Boolean
-  (Either DOMException IDBIndex)
+  (DOMException -> Eff (idb :: IDB | eff) Unit)
+  (IDBIndex -> Eff (idb :: IDB | eff) Unit)
+  Unit
 
 foreign import delete
   :: forall eff.

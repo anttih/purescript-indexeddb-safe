@@ -193,26 +193,26 @@ exports.put = function (store, item, error, success) {
   }
 };
 
-exports.createObjectStore = function (left, right, db, name, keyPath) {
+exports.createObjectStore = function (db, name, keyPath, error, success) {
   try {
     var store = db.createObjectStore(name, { keyPath: keyPath });
-    return right(store);
+    return success(store)();
   } catch (e) {
     if (e instanceof DOMException) {
-      return left(e)();
+      return error(e)();
     } else {
       throw e;
     }
   }
 };
 
-exports.createIndex = function (left, right, db, indexName, keyPath, unique) {
+exports.createIndex = function (db, indexName, keyPath, unique, error, success) {
   try {
     var index = db.createIndex(indexName, keyPath, { unique: unique });
-    return right(index);
+    return success(index)();
   } catch (e) {
     if (e instanceof DOMException) {
-      return left(e)();
+      return error(e)();
     } else {
       throw e;
     }

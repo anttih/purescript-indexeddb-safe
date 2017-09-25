@@ -34,8 +34,6 @@ import IndexedDb.Request.Internal as Internal
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
 import Prelude hiding (add)
 
-abort = Internal.abort
-
 type Request eff a = ExceptT DOMException (Aff eff) a
 
 makeRequest
@@ -106,20 +104,23 @@ createObjectStore
   -> String
   -> KeyPath
   -> Request (idb :: IDB | eff) IDBObjectStore
-createObjectStore idb store key = ExceptT
-  $ liftEff
-  $ runEffFn5 Internal.createObjectStore Left Right idb store key
+createObjectStore idb store key
+  = makeRequest
+  (\e s -> runEffFn5 Internal.createObjectStore idb store key e s)
 
 createIndex
   :: forall eff
-  . IDBObjectStore
+   . IDBObjectStore
   -> String
   -> KeyPath
   -> Boolean
   -> Request (idb :: IDB | eff) IDBIndex
-createIndex store indexName path unique = ExceptT
-  $ liftEff
-  $ runEffFn6 Internal.createIndex Left Right store indexName path unique
+createIndex store indexName path unique
+  = makeRequest
+  (\e s -> runEffFn6 Internal.createIndex store indexName path unique e s)
 
 delete :: forall eff. IDBObjectStore -> Key -> Request (idb :: IDB | eff) Unit
 delete store key = makeRequest (runEffFn4 Internal.delete store key)
+
+abort :: forall eff. IDBTransaction -> Eff (idb :: IDB | eff) Unit
+abort = Internal.abort
