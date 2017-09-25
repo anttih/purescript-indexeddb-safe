@@ -10,6 +10,7 @@ module IndexedDb.Transaction
   , add
   , clear
   , createObjectStore
+  , createIndex
   , delete
   , get
   , getAll'
@@ -45,7 +46,7 @@ import IndexedDb.KeyRange (KeyRange)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
 import IndexedDb.Store (Store(Store))
-import IndexedDb.Types (Database, IDB, IDBDatabase, IDBObjectStore, IDBTransaction, KeyPath(KeyPath), StoreName(StoreName), TxMode(TxMode), Version)
+import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath(KeyPath), StoreName(StoreName), TxMode(TxMode), Version)
 import Type.Row as R
 
 -- | IDBTransactionMode value "read"
@@ -64,6 +65,7 @@ data TransactionF (r :: # Type) a
   | GetAll StoreName (Maybe (Exists.Exists KeyRange)) (Array Foreign -> F a)
   | Delete StoreName Key a
   | Put StoreName Foreign a
+  | CreateIndex StoreName String KeyPath Boolean (IDBIndex -> a)
   | CreateObjectStore String KeyPath (List.List IndexSpec) (IDBObjectStore -> a)
   | IndexUnique StoreName String Key (Maybe Foreign -> F a)
   | IndexNonUnique StoreName String Key (Array Foreign -> F a)
@@ -205,6 +207,15 @@ createObjectStore
 createObjectStore (Store { name, keyPath }) = liftF
   $ CreateObjectStore name (KeyPath keyPath) (rowListToIndices (R.RLProxy :: R.RLProxy rl)) id
 
+createIndex
+  :: forall mode
+   . StoreName
+  -> String
+  -> KeyPath
+  -> Boolean
+  -> Transaction (versionchange :: VersionChange | mode) IDBIndex
+createIndex storeName indexName keyPath unique = liftF
+  $ CreateIndex storeName indexName keyPath unique id
 
 -- | Class which implements a safe index function for the possible different
 -- | index types: unique and non-unique. The return type is different between
@@ -276,6 +287,10 @@ evalTx idb tx = case _ of
     store <- Req.objectStore storeName tx
     Req.put store d
     pure next
+  CreateIndex storeName name keyPath unique f -> do
+    store <- Req.objectStore storeName tx
+    index <- Req.createIndex store name keyPath unique
+    pure (f index)
   CreateObjectStore storeName keyPath indices f -> do
     store <- Req.createObjectStore idb storeName keyPath
     _ <- traverse (\{ name, unique } ->
