@@ -7,3 +7,5 @@
 /.purs*
 /.psa*
 bundle.js
+psc-package.json
+/.psc-package/
