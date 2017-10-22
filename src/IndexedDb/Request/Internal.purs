@@ -148,6 +148,15 @@ foreign import createIndex
   (IDBIndex -> Eff (idb :: IDB | eff) Unit)
   Unit
 
+foreign import deleteIndex
+  :: forall eff.
+  EffFn4 (idb :: IDB | eff)
+  IDBObjectStore
+  String
+  (DOMException -> Eff (idb :: IDB | eff) Unit)
+  (Unit -> Eff (idb :: IDB | eff) Unit)
+  Unit
+
 foreign import delete
   :: forall eff.
   EffFn4 (idb :: IDB | eff)

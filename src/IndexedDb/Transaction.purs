@@ -66,6 +66,7 @@ data TransactionF (r :: # Type) a
   | Delete StoreName Key a
   | Put StoreName Foreign a
   | CreateIndex StoreName String KeyPath Boolean (IDBIndex -> a)
+  | DeleteIndex StoreName String a
   | CreateObjectStore String KeyPath (List.List IndexSpec) (IDBObjectStore -> a)
   | IndexUnique StoreName String Key (Maybe Foreign -> F a)
   | IndexNonUnique StoreName String Key (Array Foreign -> F a)
@@ -291,6 +292,10 @@ evalTx idb tx = case _ of
     store <- Req.objectStore storeName tx
     index <- Req.createIndex store name keyPath unique
     pure (f index)
+  DeleteIndex storeName indexName next -> do
+    store <- Req.objectStore storeName tx
+    Req.deleteIndex store indexName
+    pure next
   CreateObjectStore storeName keyPath indices f -> do
     store <- Req.createObjectStore idb storeName keyPath
     _ <- traverse (\{ name, unique } ->

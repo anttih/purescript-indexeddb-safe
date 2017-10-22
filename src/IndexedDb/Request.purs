@@ -6,6 +6,7 @@ module IndexedDb.Request
   , close
   , createObjectStore
   , createIndex
+  , deleteIndex
   , deleteDatabase
   , delete
   , get
@@ -118,6 +119,14 @@ createIndex
 createIndex store indexName path unique
   = makeRequest
   (\e s -> runEffFn6 Internal.createIndex store indexName path unique e s)
+
+deleteIndex
+  :: forall eff
+   . IDBObjectStore
+  -> String
+  -> Request (idb :: IDB | eff) Unit
+deleteIndex store indexName
+  = makeRequest (\e s -> runEffFn4 Internal.deleteIndex store indexName e s)
 
 delete :: forall eff. IDBObjectStore -> Key -> Request (idb :: IDB | eff) Unit
 delete store key = makeRequest (runEffFn4 Internal.delete store key)

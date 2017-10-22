@@ -219,6 +219,19 @@ exports.createIndex = function (db, indexName, keyPath, unique, error, success) 
   }
 };
 
+exports.deleteIndex = function (db, indexName, error, success) {
+  try {
+    var index = db.deleteIndex(indexName);
+    return success();
+  } catch (e) {
+    if (e instanceof DOMException) {
+      return error(e)();
+    } else {
+      throw e;
+    }
+  }
+};
+
 exports.delete = function (store, key, error, success) {
   try {
     var req = store.delete(key)
