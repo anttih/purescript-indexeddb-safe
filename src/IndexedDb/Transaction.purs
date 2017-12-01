@@ -24,7 +24,7 @@ module IndexedDb.Transaction
 
 import Prelude
 
-import Control.Monad.Aff (runAff)
+import Control.Monad.Aff (Error, runAff)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Exception (error)
@@ -123,17 +123,19 @@ open
   -> Request (idb :: IDB | eff) IDBDatabase
 open db version migrations = Req.open db version \versionChange idb itx -> void do
   let req = foldFree (evalTx idb itx) (migrate version version migrations)
-  runAff (const $ Req.abort itx) (handle itx) (runExceptT req)
+  runAff (handle itx) (runExceptT req)
 
   where
     -- TODO: Actually migrate
     migrate :: Version -> Version -> NonEmptyList VersionMigration -> VersionChangeTx Unit
     migrate _ _ migrations' = migration $ head migrations'
 
-    handle :: forall a. IDBTransaction -> Either DOMException a -> Eff (idb :: IDB | eff) Unit
+    handle :: forall a. IDBTransaction -> Either Error (Either DOMException a) -> Eff (idb :: IDB | eff) Unit
     handle tx' = case _ of
-      -- abort the transaction, this will call the error handler on the IndexedDB open request
+      -- The Aff failed
       Left _ -> Req.abort tx'
+      -- abort the transaction, this will call the error handler on the IndexedDB open request
+      Right (Left _) -> Req.abort tx'
       -- All ok, do nothing. The open request onsuccess callback will be called.
       Right _ -> pure unit
 

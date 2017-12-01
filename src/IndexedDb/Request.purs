@@ -20,7 +20,9 @@ module IndexedDb.Request
   , transaction
   ) where
 
-import Control.Monad.Aff (Aff, makeAff)
+import Prelude hiding (add)
+
+import Control.Monad.Aff (Aff, makeAff, nonCanceler)
 import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Uncurried (runEffFn2, runEffFn3, runEffFn4, runEffFn5, runEffFn6, runEffFn7)
@@ -33,7 +35,6 @@ import IndexedDb.Key (Key)
 import IndexedDb.KeyRange (KeyRange)
 import IndexedDb.Request.Internal as Internal
 import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath, StoreName, TxMode, Version, VersionChangeEventInit)
-import Prelude hiding (add)
 
 type Request eff a = ExceptT DOMException (Aff eff) a
 
@@ -44,8 +45,9 @@ makeRequest
     -> Eff (idb :: IDB | eff) Unit
     )
   -> Request (idb :: IDB | eff) a
-makeRequest f = ExceptT $ makeAff \error success -> do
-  f (success <<< Left) (success <<< Right)
+makeRequest r = ExceptT $ makeAff \f -> do
+  _ <- r (f <<< Right <<< Left) (f <<< Right <<< Right)
+  pure nonCanceler
 
 open
   :: forall eff
