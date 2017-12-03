@@ -13,7 +13,7 @@
     "mocha": "^3.4.2"
   },
   "scripts": {
-    "build": "pulp --psc-package browserify -I test --main Test.Main > bundle.js",
+    "build": "pulp browserify -I test --main Test.Main > bundle.js",
     "test": "mocha bundle.js"
   },
   "author": "",
