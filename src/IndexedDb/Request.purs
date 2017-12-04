@@ -45,9 +45,8 @@ makeRequest
     -> Eff (idb :: IDB | eff) Unit
     )
   -> Request (idb :: IDB | eff) a
-makeRequest r = ExceptT $ makeAff \f -> do
-  _ <- r (f <<< Right <<< Left) (f <<< Right <<< Right)
-  pure nonCanceler
+makeRequest r = ExceptT $ makeAff \f ->
+  r (f <<< Right <<< Left) (f <<< Right <<< Right) $> nonCanceler
 
 open
   :: forall eff
