@@ -35,18 +35,20 @@ import Data.Codec as Codec
 import Data.Either (Either(Right, Left))
 import Data.Exists as Exists
 import Data.Foreign (F, Foreign)
+import Data.List (take)
 import Data.List as List
-import Data.List.NonEmpty (NonEmptyList, head)
+import Data.List.NonEmpty (NonEmptyList, drop)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Nullable (toMaybe)
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
-import Data.Traversable (traverse)
+import Data.Traversable (sequence, traverse)
 import IndexedDb.Index (class RowListToIndices, NonUnique, Unique, IndexSpec, rowListToIndices)
 import IndexedDb.Key (class IsKey, Key, toKey)
 import IndexedDb.KeyRange (KeyRange)
 import IndexedDb.Request (Request)
 import IndexedDb.Request as Req
 import IndexedDb.Store (Store(Store))
-import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath(KeyPath), StoreName(StoreName), TxMode(TxMode), Version)
+import IndexedDb.Types (Database, IDB, IDBDatabase, IDBIndex, IDBObjectStore, IDBTransaction, KeyPath(KeyPath), StoreName(StoreName), TxMode(TxMode), Version, VersionChangeEventInit(..))
 import Type.Row as R
 
 -- | IDBTransactionMode value "read"
@@ -109,10 +111,10 @@ runReadWriteTx = runTx (TxMode "readwrite")
 type VersionChangeTx a
   = Transaction (read :: Read, write :: Write, versionchange :: VersionChange) a
 
-data VersionMigration = VersionMigration Version (VersionChangeTx Unit)
+newtype VersionMigration = VersionMigration (VersionChangeTx Unit)
 
 migration :: VersionMigration -> VersionChangeTx Unit
-migration (VersionMigration _ tx) = tx
+migration (VersionMigration tx) = tx
 
 -- | Opens the given database and migrates to the given version
 open
@@ -122,13 +124,19 @@ open
   -> NonEmptyList VersionMigration
   -> Request (idb :: IDB | eff) IDBDatabase
 open db version migrations = Req.open db version \versionChange idb itx -> void do
-  let req = foldFree (evalTx idb itx) (migrate version version migrations)
+  let req = foldFree (evalTx idb itx) (migrate versionChange migrations)
   runAff (handle itx) (runExceptT req)
 
   where
-    -- TODO: Actually migrate
-    migrate :: Version -> Version -> NonEmptyList VersionMigration -> VersionChangeTx Unit
-    migrate _ _ migrations' = migration $ head migrations'
+    -- Do nothing when there is no newVersion. This means that we are deleting the database.
+    migrate :: VersionChangeEventInit -> NonEmptyList VersionMigration -> VersionChangeTx Unit
+    migrate (VersionChangeEventInit {oldVersion, newVersion}) migrations' =
+      maybe (pure unit) doMigrate (toMaybe newVersion)
+      where
+        doMigrate :: Int -> VersionChangeTx Unit
+        doMigrate v =
+          let migrationsToRun = take (v - oldVersion) (drop oldVersion migrations')
+          in void $ sequence (map migration migrationsToRun)
 
     handle :: forall a. IDBTransaction -> Either Error (Either DOMException a) -> Eff (idb :: IDB | eff) Unit
     handle tx' = case _ of

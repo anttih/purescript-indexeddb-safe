@@ -1,7 +1,7 @@
 module IndexedDb.Types where
 
 import Control.Monad.Eff (kind Effect)
-import Data.Maybe (Maybe)
+import Data.Nullable (Nullable)
 
 foreign import data IDB :: Effect
 foreign import data IDBDatabase :: Type
@@ -17,6 +17,6 @@ newtype TxMode = TxMode String
 
 newtype VersionChangeEventInit
   = VersionChangeEventInit { oldVersion :: Int
-                           , newVersion :: Maybe Int
+                           , newVersion :: Nullable Int
                            }
 
